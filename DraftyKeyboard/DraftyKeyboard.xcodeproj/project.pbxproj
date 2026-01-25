@@ -1,0 +1,292 @@
+// !$*UTF8*$!
+{
+  archiveVersion = 1;
+  classes = {
+  };
+  objectVersion = 54;
+  objects = {
+
+/* Begin PBXBuildFile section */
+    G11111111111111111111111 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11111111111111111111111 /* AppDelegate.swift */; };
+    G11211111111111111111111 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11211111111111111111111 /* SceneDelegate.swift */; };
+    G11311111111111111111111 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11311111111111111111111 /* ViewController.swift */; };
+    G11411111111111111111111 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F11222222222222222222222 /* UIKit.framework */; };
+    G21111111111111111111111 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D21111111111111111111111 /* KeyboardViewController.swift */; };
+    G21411111111111111111111 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F11222222222222222222222 /* UIKit.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+    D11111111111111111111111 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+    D11211111111111111111111 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+    D11311111111111111111111 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+    D11411111111111111111111 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+    D11511111111111111111111 /* DraftyKeyboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DraftyKeyboard.entitlements; sourceTree = "<group>"; };
+
+    D21111111111111111111111 /* KeyboardViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardViewController.swift; sourceTree = "<group>"; };
+    D21211111111111111111111 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+    D21311111111111111111111 /* DraftyKeyboardKeyboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DraftyKeyboardKeyboard.entitlements; sourceTree = "<group>"; };
+
+    E11111111111111111111111 /* DraftyKeyboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = DraftyKeyboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+    E21111111111111111111111 /* DraftyKeyboardKeyboard.appex */ = {isa = PBXFileReference; explicitFileType = wrapper.app-extension; path = DraftyKeyboardKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+
+    F11222222222222222222222 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+    C11311111111111111111111 /* Frameworks */ = {
+      isa = PBXFrameworksBuildPhase;
+      buildActionMask = 2147483647;
+      files = (
+        G11411111111111111111111 /* UIKit.framework in Frameworks */,
+      );
+      runOnlyForDeploymentPostprocessing = 0;
+    };
+    C21311111111111111111111 /* Frameworks */ = {
+      isa = PBXFrameworksBuildPhase;
+      buildActionMask = 2147483647;
+      files = (
+        G21411111111111111111111 /* UIKit.framework in Frameworks */,
+      );
+      runOnlyForDeploymentPostprocessing = 0;
+    };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+    A22222222222222222222222 /* DraftyKeyboard */ = {
+      isa = PBXGroup;
+      children = (
+        A33333333333333333333333 /* DraftyKeyboard */,
+        A44444444444444444444444 /* DraftyKeyboardKeyboard */,
+        A66666666666666666666666 /* Frameworks */,
+        A55555555555555555555555 /* Products */,
+      );
+      sourceTree = "<group>";
+    };
+
+    A33333333333333333333333 /* DraftyKeyboard */ = {
+      isa = PBXGroup;
+      path = DraftyKeyboard;
+      sourceTree = "<group>";
+      children = (
+        D11111111111111111111111 /* AppDelegate.swift */,
+        D11211111111111111111111 /* SceneDelegate.swift */,
+        D11311111111111111111111 /* ViewController.swift */,
+        D11411111111111111111111 /* Info.plist */,
+        D11511111111111111111111 /* DraftyKeyboard.entitlements */,
+      );
+    };
+
+    A44444444444444444444444 /* DraftyKeyboardKeyboard */ = {
+      isa = PBXGroup;
+      path = DraftyKeyboardKeyboard;
+      sourceTree = "<group>";
+      children = (
+        D21111111111111111111111 /* KeyboardViewController.swift */,
+        D21211111111111111111111 /* Info.plist */,
+        D21311111111111111111111 /* DraftyKeyboardKeyboard.entitlements */,
+      );
+    };
+
+    A55555555555555555555555 /* Products */ = {
+      isa = PBXGroup;
+      children = (
+        E11111111111111111111111 /* DraftyKeyboard.app */,
+        E21111111111111111111111 /* DraftyKeyboardKeyboard.appex */,
+      );
+      name = Products;
+      sourceTree = "<group>";
+    };
+
+    A66666666666666666666666 /* Frameworks */ = {
+      isa = PBXGroup;
+      children = (
+        F11222222222222222222222 /* UIKit.framework */,
+      );
+      name = Frameworks;
+      sourceTree = "<group>";
+    };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+    B11111111111111111111111 /* DraftyKeyboard */ = {
+      isa = PBXNativeTarget;
+      buildConfigurationList = H21111111111111111111111 /* Build configuration list for PBXNativeTarget "DraftyKeyboard" */;
+      buildPhases = (
+        C11111111111111111111111 /* Sources */,
+        C11311111111111111111111 /* Frameworks */,
+      );
+      buildRules = (
+      );
+      dependencies = (
+      );
+      name = DraftyKeyboard;
+      productName = DraftyKeyboard;
+      productReference = E11111111111111111111111 /* DraftyKeyboard.app */;
+      productType = "com.apple.product-type.application";
+    };
+
+    B22222222222222222222222 /* DraftyKeyboardKeyboard */ = {
+      isa = PBXNativeTarget;
+      buildConfigurationList = H21222222222222222222222 /* Build configuration list for PBXNativeTarget "DraftyKeyboardKeyboard" */;
+      buildPhases = (
+        C21111111111111111111111 /* Sources */,
+        C21311111111111111111111 /* Frameworks */,
+      );
+      buildRules = (
+      );
+      dependencies = (
+      );
+      name = DraftyKeyboardKeyboard;
+      productName = DraftyKeyboardKeyboard;
+      productReference = E21111111111111111111111 /* DraftyKeyboardKeyboard.appex */;
+      productType = "com.apple.product-type.app-extension";
+    };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+    A11111111111111111111111 /* Project object */ = {
+      isa = PBXProject;
+      buildConfigurationList = H11111111111111111111111 /* Build configuration list for PBXProject "DraftyKeyboard" */;
+      compatibilityVersion = "Xcode 14.0";
+      developmentRegion = en;
+      hasScannedForEncodings = 0;
+      mainGroup = A22222222222222222222222 /* DraftyKeyboard */;
+      productRefGroup = A55555555555555555555555 /* Products */;
+      projectDirPath = "";
+      projectRoot = "";
+      targets = (
+        B11111111111111111111111 /* DraftyKeyboard */,
+        B22222222222222222222222 /* DraftyKeyboardKeyboard */,
+      );
+    };
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+    C11111111111111111111111 /* Sources */ = {
+      isa = PBXSourcesBuildPhase;
+      buildActionMask = 2147483647;
+      files = (
+        G11111111111111111111111 /* AppDelegate.swift in Sources */,
+        G11211111111111111111111 /* SceneDelegate.swift in Sources */,
+        G11311111111111111111111 /* ViewController.swift in Sources */,
+      );
+      runOnlyForDeploymentPostprocessing = 0;
+    };
+
+    C21111111111111111111111 /* Sources */ = {
+      isa = PBXSourcesBuildPhase;
+      buildActionMask = 2147483647;
+      files = (
+        G21111111111111111111111 /* KeyboardViewController.swift in Sources */,
+      );
+      runOnlyForDeploymentPostprocessing = 0;
+    };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+    H11111111111111111111111 /* Debug */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+        SWIFT_VERSION = 5.0;
+        TARGETED_DEVICE_FAMILY = "1,2";
+      };
+      name = Debug;
+    };
+    H11111111111111111111112 /* Release */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+        SWIFT_VERSION = 5.0;
+        TARGETED_DEVICE_FAMILY = "1,2";
+      };
+      name = Release;
+    };
+
+    H21111111111111111111111 /* Debug */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        CODE_SIGN_ENTITLEMENTS = DraftyKeyboard/DraftyKeyboard.entitlements;
+        INFOPLIST_FILE = DraftyKeyboard/Info.plist;
+        IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+        PRODUCT_BUNDLE_IDENTIFIER = com.drafty.keyboard;
+        PRODUCT_NAME = DraftyKeyboard;
+        SWIFT_VERSION = 5.0;
+      };
+      name = Debug;
+    };
+    H21111111111111111111112 /* Release */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        CODE_SIGN_ENTITLEMENTS = DraftyKeyboard/DraftyKeyboard.entitlements;
+        INFOPLIST_FILE = DraftyKeyboard/Info.plist;
+        IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+        PRODUCT_BUNDLE_IDENTIFIER = com.drafty.keyboard;
+        PRODUCT_NAME = DraftyKeyboard;
+        SWIFT_VERSION = 5.0;
+      };
+      name = Release;
+    };
+
+    H21222222222222222222222 /* Debug */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        CODE_SIGN_ENTITLEMENTS = DraftyKeyboardKeyboard/DraftyKeyboardKeyboard.entitlements;
+        INFOPLIST_FILE = DraftyKeyboardKeyboard/Info.plist;
+        IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+        PRODUCT_BUNDLE_IDENTIFIER = com.drafty.keyboard.keyboard;
+        PRODUCT_NAME = DraftyKeyboardKeyboard;
+        SKIP_INSTALL = YES;
+        SWIFT_VERSION = 5.0;
+      };
+      name = Debug;
+    };
+    H21222222222222222222223 /* Release */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        CODE_SIGN_ENTITLEMENTS = DraftyKeyboardKeyboard/DraftyKeyboardKeyboard.entitlements;
+        INFOPLIST_FILE = DraftyKeyboardKeyboard/Info.plist;
+        IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+        PRODUCT_BUNDLE_IDENTIFIER = com.drafty.keyboard.keyboard;
+        PRODUCT_NAME = DraftyKeyboardKeyboard;
+        SKIP_INSTALL = YES;
+        SWIFT_VERSION = 5.0;
+      };
+      name = Release;
+    };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+    H11111111111111111111111 /* Build configuration list for PBXProject "DraftyKeyboard" */ = {
+      isa = XCConfigurationList;
+      buildConfigurations = (
+        H11111111111111111111111 /* Debug */,
+        H11111111111111111111112 /* Release */,
+      );
+      defaultConfigurationIsVisible = 0;
+      defaultConfigurationName = Release;
+    };
+
+    H21111111111111111111111 /* Build configuration list for PBXNativeTarget "DraftyKeyboard" */ = {
+      isa = XCConfigurationList;
+      buildConfigurations = (
+        H21111111111111111111111 /* Debug */,
+        H21111111111111111111112 /* Release */,
+      );
+      defaultConfigurationIsVisible = 0;
+      defaultConfigurationName = Release;
+    };
+
+    H21222222222222222222222 /* Build configuration list for PBXNativeTarget "DraftyKeyboardKeyboard" */ = {
+      isa = XCConfigurationList;
+      buildConfigurations = (
+        H21222222222222222222222 /* Debug */,
+        H21222222222222222222223 /* Release */,
+      );
+      defaultConfigurationIsVisible = 0;
+      defaultConfigurationName = Release;
+    };
+/* End XCConfigurationList section */
+  };
+  rootObject = A11111111111111111111111 /* Project object */;
+}

@@ -1,0 +1,16 @@
+{
+  "name": "AI Rewrite (MVP)",
+  "description": "Rewrite selected text without leaving the page.",
+  "version": "0.1.0",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "host_permissions": ["http://localhost:8080/*"]
+}
