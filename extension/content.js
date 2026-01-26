@@ -1,7 +1,7 @@
 // Content script runs on every page to detect selections and inject UI.
 console.log("[AI Rewrite] content script loaded");
 
-const API_BASE_URL = "https://cachinnatory-teodora-parasitic.ngrok-free.dev";
+const API_BASE_URL = "https://drafty-ssa4.onrender.com";
 
 // Default rewrite options for MVP (no UI yet).
 const DEFAULT_OPTIONS = {
@@ -17,6 +17,8 @@ let digestCard = null;
 let currentSelection = null;
 let hideTimer = null;
 let isProcessing = false;
+let isDraggingDigest = false;
+let digestDragOffset = { x: 0, y: 0 };
 
 function createFloatingButton() {
   const existing = document.getElementById(BUTTON_ID);
@@ -84,16 +86,16 @@ function createDigestCard() {
 
   card.style.position = "absolute";
   card.style.zIndex = "2147483647";
-  card.style.maxWidth = "480px";
-  card.style.padding = "10px 12px";
-  card.style.maxHeight = "280px";
+  card.style.maxWidth = "720px";
+  card.style.padding = "15px 18px";
+  card.style.maxHeight = "420px";
   card.style.overflow = "auto";
   card.style.border = "1px solid rgba(0,0,0,0.12)";
   card.style.borderRadius = "12px";
   card.style.background = "rgba(255,255,255,0.98)";
   card.style.color = "#111";
   card.style.boxShadow = "0 8px 24px rgba(0,0,0,0.18)";
-  card.style.fontSize = "13px";
+  card.style.fontSize = "20px";
   card.style.lineHeight = "1.4";
   card.style.display = "none";
 
@@ -101,6 +103,17 @@ function createDigestCard() {
   title.textContent = "Digest";
   title.style.fontWeight = "600";
   title.style.marginBottom = "6px";
+  title.style.cursor = "move";
+  title.style.userSelect = "none";
+
+  title.addEventListener("mousedown", (e) => {
+    isDraggingDigest = true;
+    const rect = card.getBoundingClientRect();
+    digestDragOffset.x = e.clientX - rect.left;
+    digestDragOffset.y = e.clientY - rect.top;
+    card.dataset.userPositioned = "true";
+    e.preventDefault();
+  });
 
   const body = document.createElement("div");
   body.dataset.role = "digest-body";
@@ -142,11 +155,14 @@ function positionDigestCard(rect) {
     digestCard = createDigestCard();
   }
 
-  const top = rect.bottom + window.scrollY + 10;
-  const left = rect.left + window.scrollX;
+  // Only set initial position if card is not already positioned by user drag
+  if (!digestCard.dataset.userPositioned) {
+    const top = rect.bottom + window.scrollY + 10;
+    const left = rect.left + window.scrollX;
 
-  digestCard.style.top = `${top}px`;
-  digestCard.style.left = `${Math.max(left, 8)}px`;
+    digestCard.style.top = `${top}px`;
+    digestCard.style.left = `${Math.max(left, 8)}px`;
+  }
   digestCard.style.display = "block";
 }
 
@@ -385,9 +401,26 @@ document.addEventListener("selectionchange", handleSelectionChange);
 
 // Hide the button when the user scrolls or clicks elsewhere.
 document.addEventListener("scroll", hideButtonSoon, true);
-document.addEventListener("mousedown", () => {
-  hideButtonSoon();
-  if (digestCard) {
-    digestCard.style.display = "none";
+document.addEventListener("mousedown", (e) => {
+  if (!isDraggingDigest) {
+    hideButtonSoon();
+    if (digestCard && !digestCard.contains(e.target)) {
+      digestCard.style.display = "none";
+    }
   }
+});
+
+// Handle digest card dragging
+document.addEventListener("mousemove", (e) => {
+  if (isDraggingDigest && digestCard) {
+    const x = e.clientX - digestDragOffset.x + window.scrollX;
+    const y = e.clientY - digestDragOffset.y + window.scrollY;
+    digestCard.style.left = `${Math.max(0, x)}px`;
+    digestCard.style.top = `${Math.max(0, y)}px`;
+    digestCard.style.right = "auto";
+  }
+});
+
+document.addEventListener("mouseup", () => {
+  isDraggingDigest = false;
 });
