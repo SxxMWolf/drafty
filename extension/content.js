@@ -119,6 +119,43 @@ function createDigestCard() {
   body.dataset.role = "digest-body";
   body.textContent = "Loading...";
 
+  // 1. Visual Highlighting
+  body.style.marginTop = "10px";
+  body.style.padding = "12px";
+  body.style.backgroundColor = "#f9f9fb";
+  body.style.border = "1px solid #e5e5ea";
+  body.style.borderRadius = "8px";
+  body.style.fontSize = "14px";
+  body.style.lineHeight = "1.6";
+  body.style.color = "#333";
+
+  // 2. Copy Button
+  const copyBtn = document.createElement("button");
+  copyBtn.textContent = "Copy";
+  copyBtn.type = "button";
+  copyBtn.style.position = "absolute";
+  copyBtn.style.top = "12px"; // Align with title
+  copyBtn.style.right = "40px"; // Left of close button
+  copyBtn.style.padding = "4px 8px";
+  copyBtn.style.fontSize = "12px";
+  copyBtn.style.background = "#f0f0f0";
+  copyBtn.style.border = "1px solid #ddd";
+  copyBtn.style.borderRadius = "4px";
+  copyBtn.style.cursor = "pointer";
+
+  copyBtn.addEventListener("click", () => {
+    const text = body.textContent;
+    if (text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 1500);
+      });
+    }
+  });
+
   const close = document.createElement("button");
   close.type = "button";
   close.textContent = "×";
@@ -128,12 +165,14 @@ function createDigestCard() {
   close.style.border = "none";
   close.style.background = "transparent";
   close.style.cursor = "pointer";
-  close.style.fontSize = "16px";
+  close.style.fontSize = "20px";
+  close.style.color = "#666";
   close.addEventListener("click", () => {
     card.style.display = "none";
   });
 
   card.appendChild(title);
+  card.appendChild(copyBtn);
   card.appendChild(body);
   card.appendChild(close);
   document.body.appendChild(card);
@@ -423,4 +462,16 @@ document.addEventListener("mousemove", (e) => {
 
 document.addEventListener("mouseup", () => {
   isDraggingDigest = false;
+});
+
+// 3. ESC Key Support
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (floatingButton) {
+      hideButtonSoon();
+    }
+    if (digestCard && digestCard.style.display !== "none") {
+      digestCard.style.display = "none";
+    }
+  }
 });
