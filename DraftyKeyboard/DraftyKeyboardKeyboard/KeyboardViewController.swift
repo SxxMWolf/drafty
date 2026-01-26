@@ -2,119 +2,102 @@ import UIKit
 
 class KeyboardViewController: UIInputViewController {
   private let maxCharacters = 500
-  private let topBar = UIView()
-  private let appLabel = UILabel()
-  private let polishButton = UIButton(type: .system)
-  private var heightConstraint: NSLayoutConstraint?
+  private let enhanceButton = UIButton(type: .system)
   private let activityIndicator = UIActivityIndicatorView(style: .medium)
   private let statusLabel = UILabel()
+  
+  private var isLoading = false {
+    didSet {
+      DispatchQueue.main.async { [weak self] in
+        guard let self = self else { return }
+        if self.isLoading {
+          self.activityIndicator.startAnimating()
+        } else {
+          self.activityIndicator.stopAnimating()
+        }
+        self.enhanceButton.isEnabled = !self.isLoading
+        self.enhanceButton.alpha = self.isLoading ? 0.6 : 1.0
+      }
+    }
+  }
 
   override func viewDidLoad() {
     super.viewDidLoad()
     setupUI()
   }
 
-  override func viewWillAppear(_ animated: Bool) {
-    super.viewWillAppear(animated)
-    // Keep the custom keyboard at a consistent height.
-    if heightConstraint == nil {
-      let constraint = view.heightAnchor.constraint(equalToConstant: 220)
-      constraint.priority = .required
-      constraint.isActive = true
-      heightConstraint = constraint
-    }
-  }
-
   private func setupUI() {
-    view.backgroundColor = .systemBackground
-
+    // 1. Top Bar Container
+    let topBar = UIView()
+    topBar.backgroundColor = UIColor.systemGray6
     topBar.translatesAutoresizingMaskIntoConstraints = false
-    topBar.backgroundColor = .secondarySystemBackground
-    topBar.layer.cornerRadius = 12
+    view.addSubview(topBar)
 
-    appLabel.translatesAutoresizingMaskIntoConstraints = false
-    appLabel.text = "drafty"
-    appLabel.font = UIFont.systemFont(ofSize: 14, weight: .semibold)
-    appLabel.textColor = .label
-
-    polishButton.translatesAutoresizingMaskIntoConstraints = false
-    polishButton.setTitle("Polish", for: .normal)
-    polishButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .semibold)
-    polishButton.setTitleColor(.white, for: .normal)
-    polishButton.backgroundColor = .systemBlue
-    polishButton.layer.cornerRadius = 10
-    polishButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 14, bottom: 6, right: 14)
-    polishButton.addTarget(self, action: #selector(didTapPolish), for: .touchUpInside)
-
-    activityIndicator.translatesAutoresizingMaskIntoConstraints = false
-    activityIndicator.hidesWhenStopped = true
-
+    // 2. Enhance Button
+    enhanceButton.translatesAutoresizingMaskIntoConstraints = false
+    enhanceButton.setTitle("Enhance", for: .normal)
+    enhanceButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .semibold)
+    enhanceButton.setTitleColor(.white, for: .normal)
+    enhanceButton.backgroundColor = .systemBlue
+    enhanceButton.layer.cornerRadius = 10
+    enhanceButton.contentEdgeInsets = UIEdgeInsets(top: 6, left: 14, bottom: 6, right: 14)
+    enhanceButton.addTarget(self, action: #selector(didTapEnhance), for: .touchUpInside)
+    
+    // 3. Status Label
     statusLabel.translatesAutoresizingMaskIntoConstraints = false
-    statusLabel.textAlignment = .center
+    statusLabel.text = "Ready"
     statusLabel.font = UIFont.systemFont(ofSize: 12)
     statusLabel.textColor = .secondaryLabel
-    statusLabel.numberOfLines = 2
-
-    view.addSubview(topBar)
-    topBar.addSubview(appLabel)
-    topBar.addSubview(polishButton)
+    
+    // 4. Activity Indicator
+    activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+    activityIndicator.hidesWhenStopped = true
+    
+    topBar.addSubview(enhanceButton)
+    topBar.addSubview(statusLabel)
     topBar.addSubview(activityIndicator)
-    view.addSubview(statusLabel)
-
+    
     NSLayoutConstraint.activate([
-      topBar.topAnchor.constraint(equalTo: view.topAnchor, constant: 10),
-      topBar.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
-      topBar.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
-      topBar.heightAnchor.constraint(equalToConstant: 48),
-
-      appLabel.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: 12),
-      appLabel.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
-
-      polishButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -12),
-      polishButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
-
+      topBar.topAnchor.constraint(equalTo: view.topAnchor),
+      topBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      topBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      topBar.heightAnchor.constraint(equalToConstant: 44),
+      
+      enhanceButton.trailingAnchor.constraint(equalTo: topBar.trailingAnchor, constant: -12),
+      enhanceButton.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
+      
+      activityIndicator.trailingAnchor.constraint(equalTo: enhanceButton.leadingAnchor, constant: -10),
       activityIndicator.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
-      activityIndicator.trailingAnchor.constraint(equalTo: polishButton.leadingAnchor, constant: -10),
-
-      statusLabel.topAnchor.constraint(equalTo: topBar.bottomAnchor, constant: 10),
-      statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-      statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12)
+      
+      statusLabel.leadingAnchor.constraint(equalTo: topBar.leadingAnchor, constant: 12),
+      statusLabel.centerYAnchor.constraint(equalTo: topBar.centerYAnchor),
+      statusLabel.trailingAnchor.constraint(lessThanOrEqualTo: activityIndicator.leadingAnchor, constant: -10)
     ])
   }
 
-  @objc private func didTapPolish() {
-    let text = selectedTextOrCurrentSentence()
-    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    guard !trimmed.isEmpty else {
-      showStatus("No text to polish.")
+  @objc private func didTapEnhance() {
+    print("[Keyboard] Enhance tapped")
+    let proxy = textDocumentProxy
+    
+    // 1. Get selected text or context
+    // Ideally, we want selected text. But documentProxy often returns nil for selectedText.
+    // Fallback: Read text before cursor (last sentence/block).
+    
+    var textToEnhance = proxy.selectedText ?? ""
+    if textToEnhance.isEmpty {
+      // Grab reasonable context if no selection
+      if let before = proxy.documentContextBeforeInput {
+        textToEnhance = before
+      }
+    }
+    
+    guard !textToEnhance.isEmpty else {
+      showStatus("No text to enhance.")
       return
     }
-
-    guard trimmed.count <= maxCharacters else {
-      showStatus("Keep it under \(maxCharacters) characters.")
-      return
-    }
-
-    showStatus("Polishing...")
+    
+    // 2. Call API
     setLoading(true)
-    rewrite(text: trimmed)
-  }
-
-  private func selectedTextOrCurrentSentence() -> String {
-    if let selectedText = textDocumentProxy.selectedText, !selectedText.isEmpty {
-      return selectedText
-    }
-
-    let before = textDocumentProxy.documentContextBeforeInput ?? ""
-    let after = textDocumentProxy.documentContextAfterInput ?? ""
-    return extractSentence(before: before, after: after)
-  }
-
-  private func extractSentence(before: String, after: String) -> String {
-    let boundaries = CharacterSet(charactersIn: ".!?\n")
-    let beforeParts = before.components(separatedBy: boundaries)
-    let afterParts = after.components(separatedBy: boundaries)
 
     let left = beforeParts.last ?? ""
     let right = afterParts.first ?? ""

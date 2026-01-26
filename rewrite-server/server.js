@@ -20,7 +20,7 @@ app.use((req, res, next) => {
 const MAX_MOBILE_CHARS = 500;
 const MAX_DESKTOP_OUTPUT_CHARS = 1200;
 const MAX_MOBILE_OUTPUT_CHARS = 500;
-const MAX_DIGEST_OUTPUT_CHARS = 900;
+const MAX_EXTRACT_OUTPUT_CHARS = 900;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const OPENAI_FALLBACK_MODEL =
@@ -113,39 +113,42 @@ async function callOpenAIWithFallback(prompt, { maxTokens = 200 } = {}) {
   return null;
 }
 
-async function callDraftyPolish({ text, tone, platform }) {
+async function callDraftyEnhance({ text, tone, platform }) {
   if (!DRAFTY_API_URL) {
     return null;
   }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
-
+  const url = `${DRAFTY_API_URL}/enhance`;
   try {
-    const response = await fetch(DRAFTY_API_URL, {
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, tone, platform }),
-      signal: controller.signal
+      body: JSON.stringify({ text, tone, platform })
     });
-
-    if (!response.ok) {
-      return null;
-    }
-
+    if (!response.ok) return null;
     const data = await response.json();
     const polishedText = data?.polishedText;
     return typeof polishedText === "string" ? polishedText.trim() : null;
   } catch (error) {
     return null;
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
-function buildMobilePolishPrompt({ text, tone, platform }) {
+function buildMobileEnhancePrompt({ text, tone, platform }) {
   return [
-    "You are Drafty Polish for mobile.",
+    "You are Drafty Enhance for mobile.",
+    "Rewrite the text to be smoother and clearer.",
+    "Return ONLY the rewritten text.",
+    "No markdown. No explanations. No preamble.",
+    `Tone: ${tone}.`,
+    `Platform: ${platform}.`,
+    "Text:",
+    text
+  ].join("\n");
+}
+
+function buildMobileEnhancePromptV2({ text, tone, platform }) {
+  return [
+    "You are Drafty Enhance for mobile.",
     "Rewrite the text to be smoother and clearer.",
     "Return ONLY the rewritten text.",
     "No markdown. No explanations. No preamble.",
@@ -163,7 +166,6 @@ function buildMobilePolishPromptV2({ text, tone, platform }) {
     "Rewrite the text to be smoother and clearer.",
     "Return ONLY the rewritten text.",
     "No markdown. No explanations. No preamble.",
-    "Keep it concise and no longer than the input.",
     `Tone: ${tone}.`,
     `Platform: ${platform}.`,
     "Text:",
@@ -171,10 +173,10 @@ function buildMobilePolishPromptV2({ text, tone, platform }) {
   ].join("\n");
 }
 
-function buildDigestPrompt({ text, tone, language }) {
+function buildExtractPrompt({ text, tone, language }) {
   return [
-    "You are Drafty Digest for desktop.",
-    "Provide a brief summary followed by 3-5 bullet points covering the key details.",
+    "You are Drafty Extract for desktop.",
+    "Provide a brief summary followed by bullet points covering the key details.",
     "Return ONLY the summary text.",
     "No markdown (except bullets). No explanations. No preamble.",
     "Use a clear bullet point format (e.g. •).",
@@ -190,16 +192,16 @@ function polishPlaceholder(text) {
   return String(text ?? "").replace(/\s+/g, " ").trim();
 }
 
-app.post("/api/polish", async (req, res) => {
+app.post("/api/enhance", async (req, res) => {
   const start = Date.now();
   const { text, type, tone, language } = req.body || {};
   const safeText = String(text ?? "").trim();
 
-  console.log(`[POST /api/polish] Start - Mode: ${type}/${tone}, Length: ${safeText.length}`);
+  console.log(`[POST /api/enhance] Start - Mode: ${type}/${tone}, Length: ${safeText.length}`);
 
   try {
     const prompt = [
-      "You are Drafty Rewrite for desktop.",
+      "You are Drafty Enhance for desktop.",
       "Rewrite the text to be smoother and clearer.",
       "Return ONLY the rewritten text.",
       "No markdown. No explanations. No preamble.",
@@ -216,15 +218,15 @@ app.post("/api/polish", async (req, res) => {
 
     const duration = Date.now() - start;
     if (clamped) {
-      console.log(`[POST /api/polish] Success - Duration: ${duration}ms`);
+      console.log(`[POST /api/enhance] Success - Duration: ${duration}ms`);
       res.json({ result: clamped });
     } else {
-      console.error(`[POST /api/polish] Failed - Duration: ${duration}ms - No Output`);
+      console.error(`[POST /api/enhance] Failed - Duration: ${duration}ms - No Output`);
       res.json({ result: "Service busy, please try again." });
     }
   } catch (error) {
     const duration = Date.now() - start;
-    console.error(`[POST /api/polish] Error - Duration: ${duration}ms`, error);
+    console.error(`[POST /api/enhance] Error - Duration: ${duration}ms`, error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -262,31 +264,63 @@ app.post("/api/digest", async (req, res) => {
   }
 });
 
-app.post("/polish", async (req, res) => {
+app.post("/api/extract", async (req, res) => {
+  const start = Date.now();
+  const { text, tone, language } = req.body || {};
+  const safeText = String(text ?? "").trim();
+
+  console.log(`[POST /api/extract] Start - Length: ${safeText.length}`);
+
+  try {
+    const prompt = buildExtractPrompt({
+      text: safeText,
+      tone: tone || "neutral",
+      language: language || "auto"
+    });
+
+    const aiResult = await callOpenAIWithFallback(prompt, { maxTokens: 450 });
+    const clamped = clampOutputLength(aiResult, MAX_EXTRACT_OUTPUT_CHARS);
+
+    const duration = Date.now() - start;
+    if (clamped) {
+      console.log(`[POST /api/extract] Success - Duration: ${duration}ms`);
+      res.json({ result: clamped });
+    } else {
+      console.error(`[POST /api/extract] Failed - Duration: ${duration}ms - No Output`);
+      res.json({ result: polishPlaceholder(safeText) });
+    }
+  } catch (error) {
+    const duration = Date.now() - start;
+    console.error(`[POST /api/extract] Error - Duration: ${duration}ms`, error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/enhance", async (req, res) => {
   const start = Date.now();
   const { text = "", tone = "neutral", platform = "ios-keyboard" } = req.body || {};
   const safeText = String(text).slice(0, MAX_MOBILE_CHARS);
 
-  console.log(`[POST /polish] Start - Platform: ${platform}, Length: ${safeText.length}`);
+  console.log(`[POST /enhance] Start - Platform: ${platform}, Length: ${safeText.length}`);
 
   try {
-    const prompt = buildMobilePolishPrompt({ text: safeText, tone, platform });
-    const draftyResult = await callDraftyPolish({ text: safeText, tone, platform });
+    const prompt = buildMobileEnhancePrompt({ text: safeText, tone, platform });
+    const draftyResult = await callDraftyEnhance({ text: safeText, tone, platform });
     const aiResult = draftyResult || (await callOpenAIWithFallback(prompt, { maxTokens: 120 }));
     const maxOutput = MAX_MOBILE_OUTPUT_CHARS;
     const clamped = clampOutputLength(aiResult, maxOutput);
 
     const duration = Date.now() - start;
     if (clamped) {
-      console.log(`[POST /polish] Success - Duration: ${duration}ms`);
+      console.log(`[POST /enhance] Success - Duration: ${duration}ms`);
       res.json({ polishedText: clamped });
     } else {
-      console.error(`[POST /polish] Failed - Duration: ${duration}ms - No Output`);
+      console.error(`[POST /enhance] Failed - Duration: ${duration}ms - No Output`);
       res.json({ polishedText: "Please try again." });
     }
   } catch (error) {
     const duration = Date.now() - start;
-    console.error(`[POST /polish] Error - Duration: ${duration}ms`, error);
+    console.error(`[POST /enhance] Error - Duration: ${duration}ms`, error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

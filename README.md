@@ -19,14 +19,16 @@
 4. On iOS: Settings → General → Keyboard → Keyboards → Add New Keyboard → DraftyKeyboard.
 5. Enable Full Access for network calls.
 
-## Usage
-- Desktop: select text → click `Polish` or `Digest`.
-- iOS: open keyboard → tap `Polish` to rewrite selected text or current sentence.
+## How to Use
 
-## Mobile support
-- Desktop browser extension: full experience (Polish + Digest).
-- iOS keyboard: Polish only.
+- **Desktop**: Select text → click `Enhance` (rewrite) or `Extract` (summarize).
+- **iOS**: Open keyboard → tap `Enhance` to rewrite selected text or current sentence.
 
-Digest is not supported on mobile because iOS keyboard extensions have
+## Features
+
+- **Desktop browser extension**: Full experience (Enhance + Extract).
+- **iOS keyboard**: Enhance only.
+  
+> Note: Extract is not supported on mobile because iOS keyboard extensions have limited screen real estate for displaying summaries.
 strict UI and data-access limits, and cannot read large document content
 for summaries without breaking the typing flow.

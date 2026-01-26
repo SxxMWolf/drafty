@@ -11,23 +11,24 @@ const DEFAULT_OPTIONS = {
 };
 
 const BUTTON_ID = "ai-rewrite-floating-button";
-const DIGEST_CARD_ID = "ai-rewrite-digest-card";
+const EXTRACT_CARD_ID = "ai-rewrite-extract-card";
 
 // Remove existing elements from previous extension loads to ensure updates apply.
-[BUTTON_ID, DIGEST_CARD_ID].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.remove();
+[BUTTON_ID, EXTRACT_CARD_ID, "ai-rewrite-digest-card"].forEach(id => {
+  const elements = document.querySelectorAll(`#${id}`);
+  elements.forEach(el => el.remove());
 });
 
 let floatingButton = null;
-let digestCard = null;
+let extractCard = null;
 let currentSelection = null;
 let hideTimer = null;
 let isProcessing = false;
-let isDraggingDigest = false;
-let digestDragOffset = { x: 0, y: 0 };
+let isDraggingExtract = false;
+let extractDragOffset = { x: 0, y: 0 };
 
 function createFloatingButton() {
+  // Double-check cleanup
   const existing = document.getElementById(BUTTON_ID);
   if (existing) {
     return existing;
@@ -53,6 +54,7 @@ function createFloatingButton() {
   button.style.opacity = "0";
   button.style.transition = "opacity 120ms ease, transform 120ms ease";
   button.style.transform = "translateY(-4px)";
+  button.style.outline = "none"; // Prevent focus outline causing double-border effect
 
   // Prevent selection loss on click.
   button.addEventListener("mousedown", (event) => {
@@ -82,14 +84,14 @@ function getEditableRootFromSelection(selection) {
   return node.closest('[contenteditable="true"]');
 }
 
-function createDigestCard() {
-  const existing = document.getElementById(DIGEST_CARD_ID);
+function createExtractCard() {
+  const existing = document.getElementById(EXTRACT_CARD_ID);
   if (existing) {
     return existing;
   }
 
   const card = document.createElement("div");
-  card.id = DIGEST_CARD_ID;
+  card.id = EXTRACT_CARD_ID;
 
   card.style.position = "absolute";
   card.style.zIndex = "2147483647";
@@ -115,7 +117,7 @@ function createDigestCard() {
   header.style.marginTop = "-4px"; // pulling it up slightly
 
   const title = document.createElement("div");
-  title.textContent = "Digest";
+  title.textContent = "Extract";
   title.style.fontWeight = "600";
   title.style.fontSize = "16px";
   title.style.cursor = "move";
@@ -125,10 +127,10 @@ function createDigestCard() {
   header.addEventListener("mousedown", (e) => {
     // Only drag if not clicking buttons
     if (e.target.tagName !== "BUTTON") {
-      isDraggingDigest = true;
+      isDraggingExtract = true;
       const rect = card.getBoundingClientRect();
-      digestDragOffset.x = e.clientX - rect.left;
-      digestDragOffset.y = e.clientY - rect.top;
+      extractDragOffset.x = e.clientX - rect.left;
+      extractDragOffset.y = e.clientY - rect.top;
       card.dataset.userPositioned = "true";
       e.preventDefault();
     }
@@ -208,12 +210,17 @@ function createDigestCard() {
   header.appendChild(actions);
 
   const body = document.createElement("div");
-  body.dataset.role = "digest-body";
+  body.dataset.role = "extract-body";
   body.textContent = "Loading...";
   body.style.padding = "0px";
   body.style.fontSize = "15px";
   body.style.lineHeight = "1.5";
   body.style.color = "#1c1c1e";
+  body.style.marginTop = "10px";
+  body.style.padding = "12px";
+  body.style.backgroundColor = "#f9f9fb";
+  body.style.border = "1px solid #e5e5ea";
+  body.style.borderRadius = "8px";
 
   card.appendChild(header);
   card.appendChild(body);
@@ -221,30 +228,30 @@ function createDigestCard() {
   return card;
 }
 
-function updateDigestCard(text) {
-  if (!digestCard) {
-    digestCard = createDigestCard();
+function updateExtractCard(text) {
+  if (!extractCard) {
+    extractCard = createExtractCard();
   }
-  const body = digestCard.querySelector('[data-role="digest-body"]');
+  const body = extractCard.querySelector('[data-role="extract-body"]');
   if (body) {
     body.textContent = text;
   }
 }
 
-function positionDigestCard(rect) {
-  if (!digestCard) {
-    digestCard = createDigestCard();
+function positionExtractCard(rect) {
+  if (!extractCard) {
+    extractCard = createExtractCard();
   }
 
   // Only set initial position if card is not already positioned by user drag
-  if (!digestCard.dataset.userPositioned) {
+  if (!extractCard.dataset.userPositioned) {
     const top = rect.bottom + window.scrollY + 10;
     const left = rect.left + window.scrollX;
 
-    digestCard.style.top = `${top}px`;
-    digestCard.style.left = `${Math.max(left, 8)}px`;
+    extractCard.style.top = `${top}px`;
+    extractCard.style.left = `${Math.max(left, 8)}px`;
   }
-  digestCard.style.display = "block";
+  extractCard.style.display = "block";
 }
 
 function getSelectionInfo() {
@@ -343,14 +350,14 @@ function handleSelectionChange() {
     return;
   }
 
-  const isPolish =
+  const isEnhance =
     info.kind === "input" || (info.kind === "range" && info.editableRoot);
 
   if (!floatingButton) {
     floatingButton = createFloatingButton();
   }
-  floatingButton.textContent = isPolish ? "Polish" : "Digest";
-  floatingButton.dataset.mode = isPolish ? "polish" : "digest";
+  floatingButton.textContent = isEnhance ? "Enhance" : "Extract";
+  floatingButton.dataset.mode = isEnhance ? "enhance" : "extract";
 
   positionButton(info.rect);
 }
@@ -410,19 +417,19 @@ async function handleRewriteClick() {
     return;
   }
 
-  const mode = floatingButton?.dataset?.mode || "polish";
+  const mode = floatingButton?.dataset?.mode || "enhance";
   isProcessing = true;
-  floatingButton.textContent = mode === "digest" ? "Digesting..." : "Polishing...";
+  floatingButton.textContent = mode === "extract" ? "Extracting..." : "Enhancing...";
   floatingButton.disabled = true;
 
   try {
-    if (mode === "digest") {
-      updateDigestCard("Digesting...");
-      positionDigestCard(currentSelection.rect);
+    if (mode === "extract") {
+      updateExtractCard("Extracting...");
+      positionExtractCard(currentSelection.rect);
     }
 
     const endpoint =
-      mode === "digest" ? `${API_BASE_URL}/api/digest` : `${API_BASE_URL}/api/polish`;
+      mode === "extract" ? `${API_BASE_URL}/api/extract` : `${API_BASE_URL}/api/enhance`;
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -445,8 +452,8 @@ async function handleRewriteClick() {
       throw new Error("Empty rewrite result");
     }
 
-    if (mode === "digest") {
-      updateDigestCard(resultText);
+    if (mode === "extract") {
+      updateExtractCard(resultText);
     } else {
       const replaced = replaceSelectionText(resultText);
       if (!replaced) {
@@ -455,18 +462,18 @@ async function handleRewriteClick() {
     }
 
     // Reset label after a successful rewrite.
-    floatingButton.textContent = mode === "digest" ? "Digest" : "Polish";
+    floatingButton.textContent = mode === "extract" ? "Extract" : "Enhance";
   } catch (error) {
     console.error("[AI Rewrite] fetch failed", error);
     if (error && error.message) {
       console.error("[AI Rewrite] fetch error message:", error.message);
     }
-    if (mode === "digest") {
-      updateDigestCard("Failed to digest. Please try again.");
+    if (mode === "extract") {
+      updateExtractCard("Failed to extract. Please try again.");
     }
     floatingButton.textContent = "Error";
     setTimeout(() => {
-      floatingButton.textContent = mode === "digest" ? "Digest" : "Polish";
+      floatingButton.textContent = mode === "extract" ? "Extract" : "Enhance";
     }, 1200);
   } finally {
     isProcessing = false;
@@ -483,27 +490,27 @@ document.addEventListener("selectionchange", handleSelectionChange);
 // Hide the button when the user scrolls or clicks elsewhere.
 document.addEventListener("scroll", hideButtonSoon, true);
 document.addEventListener("mousedown", (e) => {
-  if (!isDraggingDigest) {
+  if (!isDraggingExtract) {
     hideButtonSoon();
-    if (digestCard && !digestCard.contains(e.target)) {
-      digestCard.style.display = "none";
+    if (extractCard && !extractCard.contains(e.target)) {
+      extractCard.style.display = "none";
     }
   }
 });
 
-// Handle digest card dragging
+// Handle extract card dragging
 document.addEventListener("mousemove", (e) => {
-  if (isDraggingDigest && digestCard) {
-    const x = e.clientX - digestDragOffset.x + window.scrollX;
-    const y = e.clientY - digestDragOffset.y + window.scrollY;
-    digestCard.style.left = `${Math.max(0, x)}px`;
-    digestCard.style.top = `${Math.max(0, y)}px`;
-    digestCard.style.right = "auto";
+  if (isDraggingExtract && extractCard) {
+    const x = e.clientX - extractDragOffset.x + window.scrollX;
+    const y = e.clientY - extractDragOffset.y + window.scrollY;
+    extractCard.style.left = `${Math.max(0, x)}px`;
+    extractCard.style.top = `${Math.max(0, y)}px`;
+    extractCard.style.right = "auto";
   }
 });
 
 document.addEventListener("mouseup", () => {
-  isDraggingDigest = false;
+  isDraggingExtract = false;
 });
 
 // 3. ESC Key Support
@@ -512,8 +519,8 @@ document.addEventListener("keydown", (e) => {
     if (floatingButton) {
       hideButtonSoon();
     }
-    if (digestCard && digestCard.style.display !== "none") {
-      digestCard.style.display = "none";
+    if (extractCard && extractCard.style.display !== "none") {
+      extractCard.style.display = "none";
     }
   }
 });
