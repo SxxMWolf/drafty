@@ -1,7 +1,7 @@
 // Content script runs on every page to detect selections and inject UI.
 console.log("[AI Rewrite] content script loaded");
 
-const API_URL = "http://localhost:8080/api/rewrite";
+const API_BASE_URL = "https://cachinnatory-teodora-parasitic.ngrok-free.dev";
 
 // Default rewrite options for MVP (no UI yet).
 const DEFAULT_OPTIONS = {
@@ -16,6 +16,7 @@ let floatingButton = null;
 let digestCard = null;
 let currentSelection = null;
 let hideTimer = null;
+let isProcessing = false;
 
 function createFloatingButton() {
   const existing = document.getElementById(BUTTON_ID);
@@ -55,15 +56,6 @@ function createFloatingButton() {
   return button;
 }
 
-function isEditableElement(element) {
-  return (
-    element &&
-    (element.tagName === "TEXTAREA" ||
-      (element.tagName === "INPUT" && element.type === "text") ||
-      element.isContentEditable)
-  );
-}
-
 function getEditableRootFromSelection(selection) {
   if (!selection || !selection.anchorNode) {
     return null;
@@ -92,8 +84,10 @@ function createDigestCard() {
 
   card.style.position = "absolute";
   card.style.zIndex = "2147483647";
-  card.style.maxWidth = "320px";
+  card.style.maxWidth = "480px";
   card.style.padding = "10px 12px";
+  card.style.maxHeight = "280px";
+  card.style.overflow = "auto";
   card.style.border = "1px solid rgba(0,0,0,0.12)";
   card.style.borderRadius = "12px";
   card.style.background = "rgba(255,255,255,0.98)";
@@ -227,6 +221,9 @@ function positionButton(rect) {
 }
 
 function hideButtonSoon() {
+  if (isProcessing) {
+    return;
+  }
   if (!floatingButton) {
     return;
   }
@@ -255,10 +252,60 @@ function handleSelectionChange() {
   if (!floatingButton) {
     floatingButton = createFloatingButton();
   }
-  floatingButton.textContent = isPolish ? "✨ Polish" : "✨ Digest";
+  floatingButton.textContent = isPolish ? "Polish" : "Digest";
   floatingButton.dataset.mode = isPolish ? "polish" : "digest";
 
   positionButton(info.rect);
+}
+
+function replaceSelectionText(resultText) {
+  if (!currentSelection) {
+    return false;
+  }
+
+  if (currentSelection.kind === "input") {
+    currentSelection.element.setRangeText(
+      resultText,
+      currentSelection.start,
+      currentSelection.end,
+      "end"
+    );
+    return true;
+  }
+
+  const selection = window.getSelection();
+  if (
+    currentSelection.editableRoot &&
+    selection &&
+    selection.rangeCount > 0 &&
+    currentSelection.editableRoot.contains(selection.anchorNode)
+  ) {
+    // Let the editor handle replacement when possible.
+    if (document.execCommand("insertText", false, resultText)) {
+      return true;
+    }
+  }
+
+  if (currentSelection.range) {
+    const range = currentSelection.range;
+    const container = range.commonAncestorContainer;
+    if (container && document.body.contains(container)) {
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      range.deleteContents();
+      const textNode = document.createTextNode(resultText);
+      range.insertNode(textNode);
+      if (selection) {
+        selection.removeAllRanges();
+        selection.collapse(textNode, textNode.length);
+      }
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function handleRewriteClick() {
@@ -267,16 +314,19 @@ async function handleRewriteClick() {
   }
 
   const mode = floatingButton?.dataset?.mode || "polish";
-  floatingButton.textContent = mode === "digest" ? "Digesting..." : "Rewriting...";
+  isProcessing = true;
+  floatingButton.textContent = mode === "digest" ? "Digesting..." : "Polishing...";
   floatingButton.disabled = true;
 
   try {
     if (mode === "digest") {
-      updateDigestCard("Summarizing...");
+      updateDigestCard("Digesting...");
       positionDigestCard(currentSelection.rect);
     }
 
-    const response = await fetch(API_URL, {
+    const endpoint =
+      mode === "digest" ? `${API_BASE_URL}/api/digest` : `${API_BASE_URL}/api/polish`;
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -300,20 +350,15 @@ async function handleRewriteClick() {
 
     if (mode === "digest") {
       updateDigestCard(resultText);
-    } else if (currentSelection.kind === "input") {
-      currentSelection.element.setRangeText(
-        resultText,
-        currentSelection.start,
-        currentSelection.end,
-        "end"
-      );
     } else {
-      currentSelection.range.deleteContents();
-      currentSelection.range.insertNode(document.createTextNode(resultText));
+      const replaced = replaceSelectionText(resultText);
+      if (!replaced) {
+        throw new Error("Failed to replace selection");
+      }
     }
 
     // Reset label after a successful rewrite.
-    floatingButton.textContent = mode === "digest" ? "✨ Digest" : "✨ Polish";
+    floatingButton.textContent = mode === "digest" ? "Digest" : "Polish";
   } catch (error) {
     console.error("[AI Rewrite] fetch failed", error);
     if (error && error.message) {
@@ -324,9 +369,10 @@ async function handleRewriteClick() {
     }
     floatingButton.textContent = "Error";
     setTimeout(() => {
-      floatingButton.textContent = mode === "digest" ? "✨ Digest" : "✨ Polish";
+      floatingButton.textContent = mode === "digest" ? "Digest" : "Polish";
     }, 1200);
   } finally {
+    isProcessing = false;
     floatingButton.disabled = false;
     hideButtonSoon();
   }

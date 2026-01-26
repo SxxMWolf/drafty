@@ -1,7 +1,7 @@
 {
   "name": "AI Rewrite (MVP)",
   "description": "Rewrite selected text without leaving the page.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "manifest_version": 3,
   "background": {
     "service_worker": "background.js"
@@ -12,5 +12,8 @@
       "js": ["content.js"]
     }
   ],
-  "host_permissions": ["http://localhost:8080/*"]
+  "host_permissions": [
+    "http://localhost:8080/*",
+    "https://cachinnatory-teodora-parasitic.ngrok-free.dev/*"
+  ]
 }
