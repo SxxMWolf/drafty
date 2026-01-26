@@ -36,7 +36,7 @@ function createFloatingButton() {
 
   const button = document.createElement("button");
   button.id = BUTTON_ID;
-  button.textContent = "✨ Rewrite";
+  button.textContent = "✨ Enhance";
   button.type = "button";
 
   // Subtle styling for a native, non-intrusive feel.
