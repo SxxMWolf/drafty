@@ -174,10 +174,11 @@ function buildMobilePolishPromptV2({ text, tone, platform }) {
 function buildDigestPrompt({ text, tone, language }) {
   return [
     "You are Drafty Digest for desktop.",
-    "Summarize the text clearly and concisely.",
+    "Provide a brief summary followed by 3-5 bullet points covering the key details.",
     "Return ONLY the summary text.",
-    "No markdown. No explanations. No preamble.",
-    "Keep it short and easy to skim.",
+    "No markdown (except bullets). No explanations. No preamble.",
+    "Use a clear bullet point format (e.g. •).",
+    "Keep it concise and easy to skim.",
     `Tone: ${tone}.`,
     `Language: ${language}.`,
     "Text:",
@@ -243,7 +244,7 @@ app.post("/api/digest", async (req, res) => {
       language: language || "auto"
     });
 
-    const aiResult = await callOpenAIWithFallback(prompt, { maxTokens: 220 });
+    const aiResult = await callOpenAIWithFallback(prompt, { maxTokens: 450 });
     const clamped = clampOutputLength(aiResult, MAX_DIGEST_OUTPUT_CHARS);
 
     const duration = Date.now() - start;

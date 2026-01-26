@@ -12,6 +12,13 @@ const DEFAULT_OPTIONS = {
 
 const BUTTON_ID = "ai-rewrite-floating-button";
 const DIGEST_CARD_ID = "ai-rewrite-digest-card";
+
+// Remove existing elements from previous extension loads to ensure updates apply.
+[BUTTON_ID, DIGEST_CARD_ID].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+});
+
 let floatingButton = null;
 let digestCard = null;
 let currentSelection = null;
@@ -95,53 +102,64 @@ function createDigestCard() {
   card.style.background = "rgba(255,255,255,0.98)";
   card.style.color = "#111";
   card.style.boxShadow = "0 8px 24px rgba(0,0,0,0.18)";
-  card.style.fontSize = "20px";
-  card.style.lineHeight = "1.4";
   card.style.display = "none";
+  card.style.minWidth = "300px";
+
+  // Header Container for Title + Actions
+  const header = document.createElement("div");
+  header.style.display = "flex";
+  header.style.alignItems = "center";
+  header.style.justifyContent = "space-between";
+  header.style.marginBottom = "12px";
+  header.style.userSelect = "none";
+  header.style.marginTop = "-4px"; // pulling it up slightly
 
   const title = document.createElement("div");
   title.textContent = "Digest";
   title.style.fontWeight = "600";
-  title.style.marginBottom = "6px";
+  title.style.fontSize = "16px";
   title.style.cursor = "move";
-  title.style.userSelect = "none";
+  title.style.marginRight = "auto"; // Push actions to the right
 
-  title.addEventListener("mousedown", (e) => {
-    isDraggingDigest = true;
-    const rect = card.getBoundingClientRect();
-    digestDragOffset.x = e.clientX - rect.left;
-    digestDragOffset.y = e.clientY - rect.top;
-    card.dataset.userPositioned = "true";
-    e.preventDefault();
+  // Draggable area on header
+  header.addEventListener("mousedown", (e) => {
+    // Only drag if not clicking buttons
+    if (e.target.tagName !== "BUTTON") {
+      isDraggingDigest = true;
+      const rect = card.getBoundingClientRect();
+      digestDragOffset.x = e.clientX - rect.left;
+      digestDragOffset.y = e.clientY - rect.top;
+      card.dataset.userPositioned = "true";
+      e.preventDefault();
+    }
   });
 
-  const body = document.createElement("div");
-  body.dataset.role = "digest-body";
-  body.textContent = "Loading...";
+  const actions = document.createElement("div");
+  actions.style.display = "flex";
+  actions.style.alignItems = "center";
+  actions.style.gap = "8px";
 
-  // 1. Visual Highlighting
-  body.style.marginTop = "10px";
-  body.style.padding = "12px";
-  body.style.backgroundColor = "#f9f9fb";
-  body.style.border = "1px solid #e5e5ea";
-  body.style.borderRadius = "8px";
-  body.style.fontSize = "14px";
-  body.style.lineHeight = "1.6";
-  body.style.color = "#333";
-
-  // 2. Copy Button
+  // 1. Copy Button
   const copyBtn = document.createElement("button");
   copyBtn.textContent = "Copy";
   copyBtn.type = "button";
-  copyBtn.style.position = "absolute";
-  copyBtn.style.top = "12px"; // Align with title
-  copyBtn.style.right = "40px"; // Left of close button
-  copyBtn.style.padding = "4px 8px";
+  copyBtn.style.padding = "4px 10px";
   copyBtn.style.fontSize = "12px";
-  copyBtn.style.background = "#f0f0f0";
-  copyBtn.style.border = "1px solid #ddd";
-  copyBtn.style.borderRadius = "4px";
+  copyBtn.style.fontWeight = "500";
+  copyBtn.style.background = "#f2f2f7";
+  copyBtn.style.border = "none";
+  copyBtn.style.borderRadius = "6px";
   copyBtn.style.cursor = "pointer";
+  copyBtn.style.color = "#333";
+  copyBtn.style.transition = "background 0.2s";
+
+  copyBtn.addEventListener("mouseover", () => {
+    copyBtn.style.background = "#e5e5ea";
+  });
+  copyBtn.addEventListener("mouseout", () => {
+    copyBtn.style.background = "#f2f2f7";
+  });
+
 
   copyBtn.addEventListener("click", () => {
     const text = body.textContent;
@@ -149,8 +167,12 @@ function createDigestCard() {
       navigator.clipboard.writeText(text).then(() => {
         const originalText = copyBtn.textContent;
         copyBtn.textContent = "Copied!";
+        copyBtn.style.background = "#34c759"; // Green success
+        copyBtn.style.color = "white";
         setTimeout(() => {
           copyBtn.textContent = originalText;
+          copyBtn.style.background = "#f2f2f7";
+          copyBtn.style.color = "#333";
         }, 1500);
       });
     }
@@ -159,22 +181,42 @@ function createDigestCard() {
   const close = document.createElement("button");
   close.type = "button";
   close.textContent = "×";
-  close.style.position = "absolute";
-  close.style.top = "6px";
-  close.style.right = "8px";
   close.style.border = "none";
   close.style.background = "transparent";
   close.style.cursor = "pointer";
-  close.style.fontSize = "20px";
-  close.style.color = "#666";
+  close.style.fontSize = "22px";
+  close.style.color = "#8e8e93";
+  close.style.padding = "0 4px";
+  close.style.lineHeight = "1";
+  close.style.marginTop = "-2px"; // Visual alignment
+
+  close.addEventListener("mouseover", () => {
+    close.style.color = "#111";
+  });
+  close.addEventListener("mouseout", () => {
+    close.style.color = "#8e8e93";
+  });
+
   close.addEventListener("click", () => {
     card.style.display = "none";
   });
 
-  card.appendChild(title);
-  card.appendChild(copyBtn);
+  actions.appendChild(copyBtn);
+  actions.appendChild(close);
+
+  header.appendChild(title);
+  header.appendChild(actions);
+
+  const body = document.createElement("div");
+  body.dataset.role = "digest-body";
+  body.textContent = "Loading...";
+  body.style.padding = "0px";
+  body.style.fontSize = "15px";
+  body.style.lineHeight = "1.5";
+  body.style.color = "#1c1c1e";
+
+  card.appendChild(header);
   card.appendChild(body);
-  card.appendChild(close);
   document.body.appendChild(card);
   return card;
 }
