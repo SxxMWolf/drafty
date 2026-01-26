@@ -1,20 +1,30 @@
 {
-  "name": "AI Rewrite (MVP)",
-  "description": "Rewrite selected text without leaving the page.",
-  "version": "0.1.1",
+  "name": "Drafty - AI Writer & Digest",
+  "description": "Polish your writing and digest long texts instantly without leaving the page.",
+  "version": "1.0.0",
   "manifest_version": 3,
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
     }
   ],
+  "action": {
+    "default_icon": {
+      "128": "icon-128.png"
+    }
+  },
+  "icons": {
+    "128": "icon-128.png"
+  },
   "host_permissions": [
-    "http://localhost:8080/*",
-    "https://cachinnatory-teodora-parasitic.ngrok-free.dev/*",
     "https://drafty-ssa4.onrender.com/*"
   ]
 }
