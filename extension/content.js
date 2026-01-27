@@ -182,7 +182,7 @@ function applyThemeToCard(card) {
 
 function updateExtractCard(text, isError = false) {
   if (!extractCard) {
-    createExtractCard();
+    extractCard = createExtractCard();
   }
   const body = extractCard.querySelector('[data-role="extract-body"]');
   if (body) {
