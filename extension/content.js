@@ -28,13 +28,22 @@ let isDraggingExtract = false;
 let extractDragOffset = { x: 0, y: 0 };
 let loadingInterval = null;
 
-function startLoadingAnimation(button, baseText) {
+function startLoadingAnimation(button, baseText, secondaryElement = null) {
   if (loadingInterval) clearInterval(loadingInterval);
   let dots = 1;
-  button.textContent = baseText + ".";
+
+  const updateText = (text) => {
+    button.textContent = text;
+    if (secondaryElement) {
+      secondaryElement.textContent = text;
+    }
+  };
+
+  updateText(baseText + ".");
+
   loadingInterval = setInterval(() => {
     dots = (dots % 3) + 1;
-    button.textContent = baseText + ".".repeat(dots);
+    updateText(baseText + ".".repeat(dots));
   }, 500);
 }
 
@@ -445,16 +454,21 @@ async function handleRewriteClick() {
   if (hideTimer) clearTimeout(hideTimer);
 
   const baseLoadingText = mode === "extract" ? "Extracting" : "Enhancing";
-  startLoadingAnimation(floatingButton, baseLoadingText);
+
+  let secondaryElement = null;
+  if (mode === "extract") {
+    updateExtractCard("Extracting...");
+    positionExtractCard(currentSelection.rect);
+    if (extractCard) {
+      secondaryElement = extractCard.querySelector('[data-role="extract-body"]');
+    }
+  }
+
+  startLoadingAnimation(floatingButton, baseLoadingText, secondaryElement);
 
   floatingButton.disabled = true;
 
   try {
-    if (mode === "extract") {
-      updateExtractCard("Extracting...");
-      positionExtractCard(currentSelection.rect);
-    }
-
     const endpoint =
       mode === "extract" ? `${API_BASE_URL}/api/extract` : `${API_BASE_URL}/api/enhance`;
     const response = await fetch(endpoint, {
