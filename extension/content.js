@@ -593,11 +593,18 @@ async function handleRewriteClick() {
     const endpoint =
       mode === "extract" ? `${API_BASE_URL}/api/extract` : `${API_BASE_URL}/api/enhance`;
 
-    // Retrieve stored tone (defaulting to neutral)
-    const storage = await new Promise(resolve => {
-      chrome.storage.sync.get(["drafty_tone"], resolve);
-    });
-    const tone = storage.drafty_tone || "neutral";
+    // Retrieve stored tone (safely)
+    let tone = "neutral";
+    try {
+      if (chrome && chrome.storage && chrome.storage.sync) {
+        const storage = await new Promise(resolve => {
+          chrome.storage.sync.get(["drafty_tone"], resolve);
+        });
+        tone = storage.drafty_tone || "neutral";
+      }
+    } catch (e) {
+      console.warn("[Drafty] Failed to load tone settings:", e);
+    }
 
     const response = await fetch(endpoint, {
       method: "POST",
