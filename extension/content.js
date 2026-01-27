@@ -26,6 +26,24 @@ let hideTimer = null;
 let isProcessing = false;
 let isDraggingExtract = false;
 let extractDragOffset = { x: 0, y: 0 };
+let loadingInterval = null;
+
+function startLoadingAnimation(button, baseText) {
+  if (loadingInterval) clearInterval(loadingInterval);
+  let dots = 1;
+  button.textContent = baseText + ".";
+  loadingInterval = setInterval(() => {
+    dots = (dots % 3) + 1;
+    button.textContent = baseText + ".".repeat(dots);
+  }, 500);
+}
+
+function stopLoadingAnimation() {
+  if (loadingInterval) {
+    clearInterval(loadingInterval);
+    loadingInterval = null;
+  }
+}
 
 function createFloatingButton() {
   // Double-check cleanup
@@ -419,7 +437,10 @@ async function handleRewriteClick() {
 
   const mode = floatingButton?.dataset?.mode || "enhance";
   isProcessing = true;
-  floatingButton.textContent = mode === "extract" ? "Extracting..." : "Enhancing...";
+
+  const baseLoadingText = mode === "extract" ? "Extracting" : "Enhancing";
+  startLoadingAnimation(floatingButton, baseLoadingText);
+
   floatingButton.disabled = true;
 
   try {
@@ -452,6 +473,8 @@ async function handleRewriteClick() {
       throw new Error("Empty rewrite result");
     }
 
+    stopLoadingAnimation(); // Stop animation before showing result
+
     if (mode === "extract") {
       updateExtractCard(resultText);
     } else {
@@ -464,6 +487,7 @@ async function handleRewriteClick() {
     // Reset label after a successful rewrite.
     floatingButton.textContent = mode === "extract" ? "Extract" : "Enhance";
   } catch (error) {
+    stopLoadingAnimation(); // Stop animation on error
     console.error("[AI Rewrite] fetch failed", error);
     if (error && error.message) {
       console.error("[AI Rewrite] fetch error message:", error.message);
@@ -480,6 +504,8 @@ async function handleRewriteClick() {
     floatingButton.disabled = false;
     hideButtonSoon();
   }
+  hideButtonSoon();
+}
 }
 
 // Listen for selection changes via mouse, keyboard, and DOM selection updates.
