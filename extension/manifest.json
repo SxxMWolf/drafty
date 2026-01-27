@@ -1,7 +1,7 @@
 {
   "name": "Drafty - AI Writer & Digest",
   "description": "Enhance your writing and extract key info instantly without leaving the page.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "manifest_version": 3,
   "background": {
     "service_worker": "background.js"
