@@ -146,32 +146,7 @@ function buildMobileEnhancePrompt({ text, tone, platform }) {
   ].join("\n");
 }
 
-function buildMobileEnhancePromptV2({ text, tone, platform }) {
-  return [
-    "You are Drafty Enhance for mobile.",
-    "Rewrite the text to be smoother and clearer.",
-    "Return ONLY the rewritten text.",
-    "No markdown. No explanations. No preamble.",
-    "Keep it concise and no longer than the input.",
-    `Tone: ${tone}.`,
-    `Platform: ${platform}.`,
-    "Text:",
-    text
-  ].join("\n");
-}
 
-function buildMobilePolishPromptV2({ text, tone, platform }) {
-  return [
-    "You are Drafty Polish for mobile.",
-    "Rewrite the text to be smoother and clearer.",
-    "Return ONLY the rewritten text.",
-    "No markdown. No explanations. No preamble.",
-    `Tone: ${tone}.`,
-    `Platform: ${platform}.`,
-    "Text:",
-    text
-  ].join("\n");
-}
 
 function buildExtractPrompt({ text, tone, language }) {
   return [
@@ -232,37 +207,7 @@ app.post("/api/enhance", async (req, res) => {
 });
 
 
-app.post("/api/digest", async (req, res) => {
-  const start = Date.now();
-  const { text, tone, language } = req.body || {};
-  const safeText = String(text ?? "").trim();
 
-  console.log(`[POST /api/digest] Start - Length: ${safeText.length}`);
-
-  try {
-    const prompt = buildDigestPrompt({
-      text: safeText,
-      tone: tone || "neutral",
-      language: language || "auto"
-    });
-
-    const aiResult = await callOpenAIWithFallback(prompt, { maxTokens: 450 });
-    const clamped = clampOutputLength(aiResult, MAX_DIGEST_OUTPUT_CHARS);
-
-    const duration = Date.now() - start;
-    if (clamped) {
-      console.log(`[POST /api/digest] Success - Duration: ${duration}ms`);
-      res.json({ result: clamped });
-    } else {
-      console.error(`[POST /api/digest] Failed - Duration: ${duration}ms - No Output`);
-      res.json({ result: polishPlaceholder(safeText) });
-    }
-  } catch (error) {
-    const duration = Date.now() - start;
-    console.error(`[POST /api/digest] Error - Duration: ${duration}ms`, error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
 
 app.post("/api/extract", async (req, res) => {
   const start = Date.now();
