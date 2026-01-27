@@ -279,14 +279,14 @@ function createExtractCard() {
   };
 
   // Font Size -
-  const fontDown = createActionBtn("A-", () => {
+  const fontDown = createActionBtn("-", () => {
     currentFontSize = Math.max(12, currentFontSize - 1);
     const b = card.querySelector('[data-role="extract-body"]');
     if (b) b.style.fontSize = `${currentFontSize}px`;
   });
 
   // Font Size +
-  const fontUp = createActionBtn("A+", () => {
+  const fontUp = createActionBtn("+", () => {
     currentFontSize = Math.min(24, currentFontSize + 1);
     const b = card.querySelector('[data-role="extract-body"]');
     if (b) b.style.fontSize = `${currentFontSize}px`;
