@@ -33,7 +33,9 @@ function startLoadingAnimation(button, baseText, secondaryElement = null) {
   let dots = 1;
 
   const updateText = (text) => {
-    button.textContent = text;
+    if (button) {
+      button.textContent = text;
+    }
     if (secondaryElement) {
       secondaryElement.textContent = text;
     }
@@ -457,6 +459,7 @@ async function handleRewriteClick() {
 
   let secondaryElement = null;
   if (mode === "extract") {
+    floatingButton.style.display = "none"; // Hide small button immediately
     updateExtractCard("Extracting...");
     positionExtractCard(currentSelection.rect);
     if (extractCard) {
@@ -464,7 +467,7 @@ async function handleRewriteClick() {
     }
   }
 
-  startLoadingAnimation(floatingButton, baseLoadingText, secondaryElement);
+  startLoadingAnimation(mode === "extract" ? null : floatingButton, baseLoadingText, secondaryElement);
 
   floatingButton.disabled = true;
 
