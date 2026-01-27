@@ -332,12 +332,14 @@ function positionButton(rect) {
     floatingButton = createFloatingButton();
   }
 
+  // Ensure button is visible for measurement
+  floatingButton.style.display = "block";
+
   const top = rect.bottom + window.scrollY + 6;
   const left = rect.right + window.scrollX - floatingButton.offsetWidth;
 
   floatingButton.style.top = `${top}px`;
   floatingButton.style.left = `${Math.max(left, 8)}px`;
-  floatingButton.style.display = "block";
   floatingButton.style.opacity = "1";
   floatingButton.style.transform = "translateY(0)";
 }
@@ -504,8 +506,6 @@ async function handleRewriteClick() {
     floatingButton.disabled = false;
     hideButtonSoon();
   }
-  hideButtonSoon();
-}
 }
 
 // Listen for selection changes via mouse, keyboard, and DOM selection updates.
