@@ -362,6 +362,9 @@ function hideButtonSoon() {
 }
 
 function handleSelectionChange() {
+  if (isProcessing) {
+    return;
+  }
   const info = getSelectionInfo();
   currentSelection = info;
 
