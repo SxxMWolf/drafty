@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 240px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      color: #1c1c1e;
+      background-color: #fbfbfd;
+    }
+    h2 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #111;
+    }
+    .option {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: 1px solid transparent;
+      font-size: 14px;
+    }
+    .option:hover {
+      background: #f2f2f7;
+    }
+    .option.selected {
+      background: #fff;
+      border: 1px solid #007aff;
+      color: #007aff;
+      font-weight: 500;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .option input {
+      display: none;
+    }
+    .footer {
+      margin-top: 16px;
+      font-size: 11px;
+      color: #8e8e93;
+      text-align: center;
+      border-top: 1px solid #e5e5ea;
+      padding-top: 12px;
+    }
+    /* Dark Mode Support */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #1c1c1e;
+        color: #fff;
+      }
+      h2 { color: #fff; }
+      .option:hover { background: #2c2c2e; }
+      .option.selected {
+        background: #2c2c2e;
+        border-color: #0a84ff;
+        color: #0a84ff;
+      }
+      .footer { border-color: #3a3a3c; }
+    }
+  </style>
+</head>
+<body>
+  <h2>Tone & Style</h2>
+  <div id="options">
+    <label class="option selected">
+      <input type="radio" name="tone" value="neutral" checked>
+      <span>Neutral (Default)</span>
+    </label>
+    <label class="option">
+      <input type="radio" name="tone" value="professional">
+      <span>Professional</span>
+    </label>
+    <label class="option">
+      <input type="radio" name="tone" value="casual">
+      <span>Casual</span>
+    </label>
+    <label class="option">
+      <input type="radio" name="tone" value="witty">
+      <span>Witty</span>
+    </label>
+    <label class="option">
+      <input type="radio" name="tone" value="concise">
+      <span>Concise</span>
+    </label>
+  </div>
+  <div class="footer">Drafty v1.0.1</div>
+  <script src="popup.js"></script>
+</body>
+</html>

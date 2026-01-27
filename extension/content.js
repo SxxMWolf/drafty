@@ -113,6 +113,88 @@ function getEditableRootFromSelection(selection) {
   return node.closest('[contenteditable="true"]');
 }
 
+// Theme & Style Constants
+let currentFontSize = 15;
+const THEME = {
+  light: {
+    bg: "rgba(255,255,255,0.98)",
+    text: "#111",
+    border: "1px solid rgba(0,0,0,0.12)",
+    bodyBg: "#f9f9fb",
+    bodyBorder: "1px solid #e5e5ea",
+    btnBg: "#f2f2f7",
+    btnText: "#333",
+    btnHover: "#e5e5ea",
+    success: "#34c759"
+  },
+  dark: {
+    bg: "rgba(30,30,30,0.98)",
+    text: "#fff",
+    border: "1px solid rgba(255,255,255,0.12)",
+    bodyBg: "#2c2c2e",
+    bodyBorder: "1px solid #3a3a3c",
+    btnBg: "#3a3a3c",
+    btnText: "#fff",
+    btnHover: "#48484a",
+    success: "#30d158"
+  }
+};
+
+const getTheme = () => {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? THEME.dark : THEME.light;
+};
+
+function applyThemeToCard(card) {
+  if (!card) return;
+  const theme = getTheme();
+
+  // Main Card
+  card.style.background = theme.bg;
+  card.style.color = theme.text;
+  card.style.border = theme.border;
+
+  // Body
+  const body = card.querySelector('[data-role="extract-body"]');
+  if (body) {
+    body.style.backgroundColor = theme.bodyBg;
+    body.style.border = theme.bodyBorder;
+    body.style.color = theme.text;
+  }
+
+  // Buttons (generic update for Action buttons)
+  const buttons = card.querySelectorAll('[data-role="action-btn"]');
+  buttons.forEach(btn => {
+    // Preserve success state color if active (simple check based on bg)
+    if (btn.style.background !== "rgb(52, 199, 89)" && btn.style.background !== "#34c759") {
+      btn.style.background = theme.btnBg;
+      btn.style.color = theme.btnText;
+    }
+  });
+
+  // Close button (special)
+  const closeBtn = card.querySelector('[data-role="close-btn"]');
+  if (closeBtn) {
+    // Actually close button can inherit or contrast. Let's force it to text color slightly dimmed.
+    closeBtn.style.color = theme.text;
+    closeBtn.style.opacity = "0.6";
+  }
+}
+
+function updateExtractCard(text, isError = false) {
+  if (!extractCard) {
+    createExtractCard();
+  }
+  const body = extractCard.querySelector('[data-role="extract-body"]');
+  if (body) {
+    body.textContent = text;
+  }
+
+  const retryContainer = extractCard.querySelector('[data-role="retry-container"]');
+  if (retryContainer) {
+    retryContainer.style.display = isError ? "block" : "none";
+  }
+}
+
 function createExtractCard() {
   const existing = document.getElementById(EXTRACT_CARD_ID);
   if (existing) {
@@ -122,19 +204,18 @@ function createExtractCard() {
   const card = document.createElement("div");
   card.id = EXTRACT_CARD_ID;
 
+  // Base styles
   card.style.position = "absolute";
   card.style.zIndex = "2147483647";
   card.style.maxWidth = "720px";
   card.style.padding = "15px 18px";
   card.style.maxHeight = "420px";
   card.style.overflow = "auto";
-  card.style.border = "1px solid rgba(0,0,0,0.12)";
   card.style.borderRadius = "12px";
-  card.style.background = "rgba(255,255,255,0.98)";
-  card.style.color = "#111";
   card.style.boxShadow = "0 8px 24px rgba(0,0,0,0.18)";
   card.style.display = "none";
   card.style.minWidth = "300px";
+  card.style.transition = "background 0.3s, color 0.3s";
 
   // Header Container for Title + Actions
   const header = document.createElement("div");
@@ -143,18 +224,17 @@ function createExtractCard() {
   header.style.justifyContent = "space-between";
   header.style.marginBottom = "12px";
   header.style.userSelect = "none";
-  header.style.marginTop = "-4px"; // pulling it up slightly
+  header.style.marginTop = "-4px";
 
   const title = document.createElement("div");
   title.textContent = "Extract";
   title.style.fontWeight = "600";
   title.style.fontSize = "16px";
   title.style.cursor = "move";
-  title.style.marginRight = "auto"; // Push actions to the right
+  title.style.marginRight = "auto";
 
   // Draggable area on header
   header.addEventListener("mousedown", (e) => {
-    // Only drag if not clicking buttons
     if (e.target.tagName !== "BUTTON") {
       isDraggingExtract = true;
       const rect = card.getBoundingClientRect();
@@ -170,68 +250,88 @@ function createExtractCard() {
   actions.style.alignItems = "center";
   actions.style.gap = "8px";
 
-  // 1. Copy Button
-  const copyBtn = document.createElement("button");
-  copyBtn.textContent = "Copy";
-  copyBtn.type = "button";
-  copyBtn.style.padding = "4px 10px";
-  copyBtn.style.fontSize = "12px";
-  copyBtn.style.fontWeight = "500";
-  copyBtn.style.background = "#f2f2f7";
-  copyBtn.style.border = "none";
-  copyBtn.style.borderRadius = "6px";
-  copyBtn.style.cursor = "pointer";
-  copyBtn.style.color = "#333";
-  copyBtn.style.transition = "background 0.2s";
+  // Helper to create action buttons
+  const createActionBtn = (text, onClick) => {
+    const btn = document.createElement("button");
+    btn.textContent = text;
+    btn.type = "button";
+    btn.dataset.role = "action-btn";
+    btn.style.padding = "4px 10px";
+    btn.style.fontSize = "12px";
+    btn.style.fontWeight = "500";
+    btn.style.border = "none";
+    btn.style.borderRadius = "6px";
+    btn.style.cursor = "pointer";
+    btn.style.transition = "background 0.2s";
 
-  copyBtn.addEventListener("mouseover", () => {
-    copyBtn.style.background = "#e5e5ea";
+    // Hover effect relies on theme, will add simple listener
+    btn.addEventListener("mouseover", () => {
+      const t = getTheme();
+      if (btn.textContent !== "Copied!") btn.style.background = t.btnHover;
+    });
+    btn.addEventListener("mouseout", () => {
+      const t = getTheme();
+      if (btn.textContent !== "Copied!") btn.style.background = t.btnBg;
+    });
+
+    btn.addEventListener("click", onClick);
+    return btn;
+  };
+
+  // Font Size -
+  const fontDown = createActionBtn("A-", () => {
+    currentFontSize = Math.max(12, currentFontSize - 1);
+    const b = card.querySelector('[data-role="extract-body"]');
+    if (b) b.style.fontSize = `${currentFontSize}px`;
   });
-  copyBtn.addEventListener("mouseout", () => {
-    copyBtn.style.background = "#f2f2f7";
+
+  // Font Size +
+  const fontUp = createActionBtn("A+", () => {
+    currentFontSize = Math.min(24, currentFontSize + 1);
+    const b = card.querySelector('[data-role="extract-body"]');
+    if (b) b.style.fontSize = `${currentFontSize}px`;
   });
 
-
-  copyBtn.addEventListener("click", () => {
-    const text = body.textContent;
-    if (text) {
+  // Copy Button
+  const copyBtn = createActionBtn("Copy", () => {
+    const body = card.querySelector('[data-role="extract-body"]');
+    const text = body ? body.textContent : "";
+    if (text && text !== "Loading..." && !text.includes("Failed")) {
       navigator.clipboard.writeText(text).then(() => {
         const originalText = copyBtn.textContent;
+        const theme = getTheme();
         copyBtn.textContent = "Copied!";
-        copyBtn.style.background = "#34c759"; // Green success
-        copyBtn.style.color = "white";
+        copyBtn.style.background = theme.success;
+        copyBtn.style.color = "#fff";
         setTimeout(() => {
           copyBtn.textContent = originalText;
-          copyBtn.style.background = "#f2f2f7";
-          copyBtn.style.color = "#333";
+          const t = getTheme();
+          copyBtn.style.background = t.btnBg;
+          copyBtn.style.color = t.btnText;
         }, 1500);
       });
     }
   });
 
+  // Close Button
   const close = document.createElement("button");
   close.type = "button";
+  close.dataset.role = "close-btn";
   close.textContent = "×";
   close.style.border = "none";
   close.style.background = "transparent";
   close.style.cursor = "pointer";
   close.style.fontSize = "22px";
-  close.style.color = "#8e8e93";
   close.style.padding = "0 4px";
   close.style.lineHeight = "1";
-  close.style.marginTop = "-2px"; // Visual alignment
-
-  close.addEventListener("mouseover", () => {
-    close.style.color = "#111";
-  });
-  close.addEventListener("mouseout", () => {
-    close.style.color = "#8e8e93";
-  });
-
+  close.style.marginTop = "-2px";
   close.addEventListener("click", () => {
     card.style.display = "none";
   });
 
+  // Assemble Actions
+  actions.appendChild(fontDown);
+  actions.appendChild(fontUp);
   actions.appendChild(copyBtn);
   actions.appendChild(close);
 
@@ -242,30 +342,48 @@ function createExtractCard() {
   body.dataset.role = "extract-body";
   body.textContent = "Loading...";
   body.style.padding = "0px";
-  body.style.fontSize = "15px";
+  body.style.fontSize = `${currentFontSize}px`;
   body.style.lineHeight = "1.5";
-  body.style.color = "#1c1c1e";
   body.style.marginTop = "10px";
   body.style.padding = "12px";
-  body.style.backgroundColor = "#f9f9fb";
-  body.style.border = "1px solid #e5e5ea";
   body.style.borderRadius = "8px";
+  body.style.transition = "background 0.3s, color 0.3s";
+
+  // Retry Container (Hidden by default)
+  const retryContainer = document.createElement("div");
+  retryContainer.dataset.role = "retry-container";
+  retryContainer.style.display = "none";
+  retryContainer.style.marginTop = "12px";
+  retryContainer.style.textAlign = "center";
+
+  const retryBtn = createActionBtn("Retry", () => {
+    // Retry logic will be handled by calling handleRewriteClick again
+    // We need to re-trigger the process. 
+    // Since handleRewriteClick relies on global state (currentSelection, floatingButton mode), 
+    // we can just call it if we ensure the state is preserved.
+    handleRewriteClick();
+  });
+  retryContainer.appendChild(retryBtn);
+
 
   card.appendChild(header);
   card.appendChild(body);
+  card.appendChild(retryContainer);
+
   document.body.appendChild(card);
+
+  // Apply initial theme
+  applyThemeToCard(card);
+
+  // Listen for theme changes
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    applyThemeToCard(card);
+  });
+
   return card;
 }
 
-function updateExtractCard(text) {
-  if (!extractCard) {
-    extractCard = createExtractCard();
-  }
-  const body = extractCard.querySelector('[data-role="extract-body"]');
-  if (body) {
-    body.textContent = text;
-  }
-}
+
 
 function positionExtractCard(rect) {
   if (!extractCard) {
@@ -474,6 +592,13 @@ async function handleRewriteClick() {
   try {
     const endpoint =
       mode === "extract" ? `${API_BASE_URL}/api/extract` : `${API_BASE_URL}/api/enhance`;
+
+    // Retrieve stored tone (defaulting to neutral)
+    const storage = await new Promise(resolve => {
+      chrome.storage.sync.get(["drafty_tone"], resolve);
+    });
+    const tone = storage.drafty_tone || "neutral";
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -481,6 +606,7 @@ async function handleRewriteClick() {
       },
       body: JSON.stringify({
         text: currentSelection.text,
+        tone: tone,
         ...DEFAULT_OPTIONS
       })
     });
@@ -516,7 +642,10 @@ async function handleRewriteClick() {
       console.error("[AI Rewrite] fetch error message:", error.message);
     }
     if (mode === "extract") {
-      updateExtractCard("Failed to extract. Please try again.");
+      updateExtractCard(
+        `Failed to extract. ${error.message || "Please check your connection."}`,
+        true // isError
+      );
     }
     floatingButton.textContent = "Error";
     setTimeout(() => {
