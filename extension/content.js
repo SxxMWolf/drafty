@@ -442,6 +442,7 @@ async function handleRewriteClick() {
 
   const mode = floatingButton?.dataset?.mode || "enhance";
   isProcessing = true;
+  if (hideTimer) clearTimeout(hideTimer);
 
   const baseLoadingText = mode === "extract" ? "Extracting" : "Enhancing";
   startLoadingAnimation(floatingButton, baseLoadingText);
@@ -519,11 +520,20 @@ document.addEventListener("selectionchange", handleSelectionChange);
 // Hide the button when the user scrolls or clicks elsewhere.
 document.addEventListener("scroll", hideButtonSoon, true);
 document.addEventListener("mousedown", (e) => {
-  if (!isDraggingExtract) {
-    hideButtonSoon();
-    if (extractCard && !extractCard.contains(e.target)) {
-      extractCard.style.display = "none";
-    }
+  if (isDraggingExtract) return;
+
+  // Don't hide if clicking on the button itself or the extract card
+  if (floatingButton && floatingButton.contains(e.target)) {
+    return;
+  }
+  if (extractCard && extractCard.contains(e.target)) {
+    return;
+  }
+
+  hideButtonSoon();
+
+  if (extractCard && !extractCard.contains(e.target)) {
+    extractCard.style.display = "none";
   }
 });
 
