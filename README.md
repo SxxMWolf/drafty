@@ -2,26 +2,26 @@
 
 Drafty is an intelligent Chrome extension that enhances your writing and extracts key insights from any webpage instantly.
 
-## 🚀 Key Features
+## Key Features
 
-### ✍️ Enhance (AI Writer)
+### Enhance (AI Writer)
 Select text in any input field (email, chat, docs) and click **Enhance** to rewrite it.
 - **5 Tones**: Neutral, Professional, Casual, Witty, Concise.
 - **Context-Aware**: Improves grammar, clarity, and flow based on the content.
 
-### 🧠 Extract (AI Summarizer)
+### Extract (AI Summarizer)
 Select any text on a webpage and click **Extract** to get a concise summary.
 - **Bullet Points**: Breaks down complex information into easy-to-read points.
 - **Floating Card**: Draggable, non-intrusive UI.
 - **Tools**: Copy to clipboard, adjust font size, and retry on failure.
 
-### 🎨 Customizable UI
+### Customizable UI
 - **Dark Mode**: Automatically adapts to your system theme.
 - **Settings Popup**: Choose your preferred tone directly from the toolbar.
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Chrome Extension (Developer Mode)
 1. Clone this repository.
@@ -39,7 +39,7 @@ The iOS app provides a custom keyboard for on-the-go rewriting.
 
 ---
 
-## 🛠 Server Setup (Optional)
+## Server Setup (Optional)
 
 The extension is configured to use our production server (`https://drafty-ssa4.onrender.com`) by default.
 If you want to run the backend locally:
@@ -66,12 +66,12 @@ If you want to run the backend locally:
 
 ---
 
-## 💻 Tech Stack
+## Tech Stack
 
 - **Frontend**: Chrome Extension Manifest V3, Vanilla JS, HTML5, CSS3.
 - **Backend**: Node.js, Express, OpenAI API (GPT-4o / GPT-3.5-turbo).
 - **Deployment**: Render (Web Service).
 
-## 🔒 Privacy
+## Privacy
 
 Drafty processes text securely via HTTPS and does not store user data. The text is sent to the AI server solely for processing and is discarded immediately after the response is generated.
