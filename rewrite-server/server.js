@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const app = express();
 app.use(express.json());
@@ -21,13 +22,23 @@ const MAX_MOBILE_CHARS = 500;
 const MAX_DESKTOP_OUTPUT_CHARS = 1200;
 const MAX_MOBILE_OUTPUT_CHARS = 500;
 const MAX_EXTRACT_OUTPUT_CHARS = 900;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
-const OPENAI_FALLBACK_MODEL =
-  process.env.OPENAI_FALLBACK_MODEL || "gpt-4o-mini";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_MODEL = "gemini-1.5-flash";
 
-const OPENAI_TIMEOUT_MS = 10000;
 const DRAFTY_API_URL = process.env.DRAFTY_API_URL || "";
+
+// Initialize Gemini
+let genAI = null;
+let model = null;
+
+if (GEMINI_API_KEY) {
+  try {
+    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+  } catch (e) {
+    console.error("[Gemini] Initialization failed:", e);
+  }
+}
 
 function sanitizeOutput(text) {
   return String(text ?? "")
@@ -60,57 +71,26 @@ function clampOutputLength(text, maxLength) {
   return `${slice}...`;
 }
 
-async function callOpenAI(prompt, { model, maxTokens = 200 } = {}) {
-  if (!OPENAI_API_KEY) {
+async function callGemini(prompt) {
+  if (!model) {
+    console.error("[Gemini] Model not initialized (missing API key?)");
     return null;
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
-
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: model || OPENAI_MODEL,
-        input: prompt,
-        max_output_tokens: maxTokens
-      }),
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    const textOutput = data?.output?.[0]?.content?.[0]?.text;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const textOutput = response.text();
     return typeof textOutput === "string" ? textOutput.trim() : null;
   } catch (error) {
-    if (error.name === 'AbortError') {
-      console.error(`[OpenAI] Timeout after ${OPENAI_TIMEOUT_MS}ms`);
-    } else {
-      console.error(`[OpenAI] Error: ${error.message}`);
-    }
+    console.error(`[Gemini] Error: ${error.message}`);
     return null;
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
-async function callOpenAIWithFallback(prompt, { maxTokens = 200 } = {}) {
-  const primary = await callOpenAI(prompt, { model: OPENAI_MODEL, maxTokens });
-  if (primary) {
-    return primary;
-  }
-  if (OPENAI_FALLBACK_MODEL && OPENAI_FALLBACK_MODEL !== OPENAI_MODEL) {
-    return callOpenAI(prompt, { model: OPENAI_FALLBACK_MODEL, maxTokens });
-  }
-  return null;
+async function callGeminiWithFallback(prompt) {
+  // Simple wrapper for now, can add fallback logic later if needed
+  return callGemini(prompt);
 }
 
 async function callDraftyEnhance({ text, tone, platform }) {
@@ -187,7 +167,7 @@ app.post("/api/enhance", async (req, res) => {
       safeText
     ].join("\n");
 
-    const aiResult = await callOpenAIWithFallback(prompt, { maxTokens: 400 });
+    const aiResult = await callGeminiWithFallback(prompt);
     const maxOutput = MAX_DESKTOP_OUTPUT_CHARS;
     const clamped = clampOutputLength(aiResult, maxOutput);
 
@@ -223,7 +203,7 @@ app.post("/api/extract", async (req, res) => {
       language: language || "auto"
     });
 
-    const aiResult = await callOpenAIWithFallback(prompt, { maxTokens: 450 });
+    const aiResult = await callGeminiWithFallback(prompt);
     const clamped = clampOutputLength(aiResult, MAX_EXTRACT_OUTPUT_CHARS);
 
     const duration = Date.now() - start;
@@ -251,7 +231,7 @@ app.post("/enhance", async (req, res) => {
   try {
     const prompt = buildMobileEnhancePrompt({ text: safeText, tone, platform });
     const draftyResult = await callDraftyEnhance({ text: safeText, tone, platform });
-    const aiResult = draftyResult || (await callOpenAIWithFallback(prompt, { maxTokens: 120 }));
+    const aiResult = draftyResult || (await callGeminiWithFallback(prompt));
     const maxOutput = MAX_MOBILE_OUTPUT_CHARS;
     const clamped = clampOutputLength(aiResult, maxOutput);
 
