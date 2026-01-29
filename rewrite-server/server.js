@@ -71,17 +71,25 @@ function clampOutputLength(text, maxLength) {
   return `${slice}...`;
 }
 
-async function callGemini(prompt) {
+async function callGemini(prompt, { temperature = 0.3, maxOutputTokens = 800 } = {}) {
   if (!model) {
     console.error("[Gemini] Model not initialized (missing API key?)");
     return null;
   }
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: temperature,
+        topP: 0.9,
+        maxOutputTokens: maxOutputTokens
+      }
+    });
+
     const response = await result.response;
-    const textOutput = response.text();
-    return typeof textOutput === "string" ? textOutput.trim() : null;
+    const text = response.text();
+    return typeof text === "string" ? text.trim() : null;
   } catch (error) {
     console.error(`[Gemini] Error: ${error.message}`);
     return null;
@@ -130,12 +138,14 @@ function buildMobileEnhancePrompt({ text, tone, platform }) {
 
 function buildExtractPrompt({ text, tone, language }) {
   return [
-    "You are Drafty Extract for desktop.",
-    "Provide a brief summary followed by bullet points covering the key details.",
-    "Return ONLY the summary text.",
-    "No markdown (except bullets). No explanations. No preamble.",
-    "Use a clear bullet point format (e.g. •).",
-    "Keep it concise and easy to skim.",
+    "You are Drafty Extract.",
+    "Summarize the following text.",
+    "First line: 1-sentence overview.",
+    "Then: bullet points with key facts only.",
+    "Do NOT add opinions.",
+    "Do NOT repeat the text verbatim.",
+    "Return ONLY the summary.",
+    "Bullet symbol must be •",
     `Tone: ${tone}.`,
     `Language: ${language}.`,
     "Text:",
