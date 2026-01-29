@@ -23,7 +23,7 @@ const MAX_DESKTOP_OUTPUT_CHARS = 1200;
 const MAX_MOBILE_OUTPUT_CHARS = 500;
 const MAX_EXTRACT_OUTPUT_CHARS = 900;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-flash-latest";
 
 const DRAFTY_API_URL = process.env.DRAFTY_API_URL || "";
 
