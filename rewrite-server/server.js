@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
 const app = express();
 app.use(express.json());
@@ -22,22 +22,16 @@ const MAX_MOBILE_CHARS = 500;
 const MAX_DESKTOP_OUTPUT_CHARS = 1200;
 const MAX_MOBILE_OUTPUT_CHARS = 500;
 const MAX_EXTRACT_OUTPUT_CHARS = 900;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_MODEL = "gemini-flash-latest";
 
-const DRAFTY_API_URL = process.env.DRAFTY_API_URL || "";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+let openai = null;
 
-// Initialize Gemini
-let genAI = null;
-let model = null;
-
-if (GEMINI_API_KEY) {
-  try {
-    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-  } catch (e) {
-    console.error("[Gemini] Initialization failed:", e);
-  }
+if (OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: OPENAI_API_KEY,
+  });
+} else {
+  console.warn("[OpenAI] Warning: OPENAI_API_KEY not found in environment.");
 }
 
 function sanitizeOutput(text) {
@@ -71,91 +65,30 @@ function clampOutputLength(text, maxLength) {
   return `${slice}...`;
 }
 
-async function callGemini(prompt, { temperature = 0.3, maxOutputTokens = 800 } = {}) {
-  if (!model) {
-    console.error("[Gemini] Model not initialized (missing API key?)");
+async function callOpenAI(messages, { temperature = 0.3, maxTokens = 800 } = {}) {
+  if (!openai) {
+    console.error("[OpenAI] Client not initialized (missing API key?)");
     return null;
   }
 
   try {
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: temperature,
-        topP: 0.9,
-        maxOutputTokens: maxOutputTokens
-      }
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: messages,
+      temperature: temperature,
+      max_tokens: maxTokens,
+      top_p: 1.0,
     });
 
-    const response = await result.response;
-    const text = response.text();
+    const text = completion.choices[0]?.message?.content;
     return typeof text === "string" ? text.trim() : null;
   } catch (error) {
-    console.error(`[Gemini] Error: ${error.message}`);
+    console.error(`[OpenAI] Error: ${error.message}`);
     return null;
   }
 }
 
-async function callGeminiWithFallback(prompt) {
-  // Simple wrapper for now, can add fallback logic later if needed
-  return callGemini(prompt);
-}
 
-async function callDraftyEnhance({ text, tone, platform }) {
-  if (!DRAFTY_API_URL) {
-    return null;
-  }
-  const url = `${DRAFTY_API_URL}/enhance`;
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, tone, platform })
-    });
-    if (!response.ok) return null;
-    const data = await response.json();
-    const polishedText = data?.polishedText;
-    return typeof polishedText === "string" ? polishedText.trim() : null;
-  } catch (error) {
-    return null;
-  }
-}
-
-function buildMobileEnhancePrompt({ text, tone, platform }) {
-  return [
-    "You are Drafty Enhance for mobile.",
-    "Rewrite the text to be smoother and clearer.",
-    "Return ONLY the rewritten text.",
-    "No markdown. No explanations. No preamble.",
-    `Tone: ${tone}.`,
-    `Platform: ${platform}.`,
-    "Text:",
-    text
-  ].join("\n");
-}
-
-
-
-function buildExtractPrompt({ text, tone, language }) {
-  return [
-    "You are Drafty Extract.",
-    "Summarize the following text.",
-    "First line: 1-sentence overview.",
-    "Then: bullet points with key facts only.",
-    "Do NOT add opinions.",
-    "Do NOT repeat the text verbatim.",
-    "Return ONLY the summary.",
-    "Bullet symbol must be •",
-    `Tone: ${tone}.`,
-    `Language: ${language}.`,
-    "Text:",
-    text
-  ].join("\n");
-}
-
-function polishPlaceholder(text) {
-  return String(text ?? "").replace(/\s+/g, " ").trim();
-}
 
 app.post("/api/enhance", async (req, res) => {
   const start = Date.now();
@@ -165,19 +98,29 @@ app.post("/api/enhance", async (req, res) => {
   console.log(`[POST /api/enhance] Start - Mode: ${type}/${tone}, Length: ${safeText.length}`);
 
   try {
-    const prompt = [
-      "You are Drafty Enhance for desktop.",
-      "Rewrite the text to be smoother and clearer.",
-      "Return ONLY the rewritten text.",
-      "No markdown. No explanations. No preamble.",
-      `Type: ${type || "community"}.`,
-      `Tone: ${tone || "neutral"}.`,
-      `Language: ${language || "auto"}.`,
-      "Text:",
-      safeText
-    ].join("\n");
+    const messages = [
+      {
+        role: "system",
+        content: [
+          "You are Drafty Enhance for desktop.",
+          "Rewrite the text to be smoother and clearer.",
+          "Return ONLY the rewritten text.",
+          "No markdown. No explanations. No preamble."
+        ].join("\n")
+      },
+      {
+        role: "user",
+        content: [
+          `Type: ${type || "community"}.`,
+          `Tone: ${tone || "neutral"}.`,
+          `Language: ${language || "auto"}.`,
+          "Text:",
+          safeText
+        ].join("\n")
+      }
+    ];
 
-    const aiResult = await callGeminiWithFallback(prompt);
+    const aiResult = await callOpenAI(messages, { maxTokens: 800 });
     const maxOutput = MAX_DESKTOP_OUTPUT_CHARS;
     const clamped = clampOutputLength(aiResult, maxOutput);
 
@@ -196,9 +139,6 @@ app.post("/api/enhance", async (req, res) => {
   }
 });
 
-
-
-
 app.post("/api/extract", async (req, res) => {
   const start = Date.now();
   const { text, tone, language } = req.body || {};
@@ -207,13 +147,32 @@ app.post("/api/extract", async (req, res) => {
   console.log(`[POST /api/extract] Start - Length: ${safeText.length}`);
 
   try {
-    const prompt = buildExtractPrompt({
-      text: safeText,
-      tone: tone || "neutral",
-      language: language || "auto"
-    });
+    const messages = [
+      {
+        role: "system",
+        content: [
+          "You are Drafty Extract.",
+          "Summarize the following text.",
+          "First line: 1-sentence overview.",
+          "Then: bullet points with key facts only.",
+          "Do NOT add opinions.",
+          "Do NOT repeat the text verbatim.",
+          "Return ONLY the summary.",
+          "Bullet symbol must be •"
+        ].join("\n")
+      },
+      {
+        role: "user",
+        content: [
+          `Tone: ${tone || "neutral"}.`,
+          `Language: ${language || "auto"}.`,
+          "Text:",
+          safeText
+        ].join("\n")
+      }
+    ];
 
-    const aiResult = await callGeminiWithFallback(prompt);
+    const aiResult = await callOpenAI(messages, { maxTokens: 800 });
     const clamped = clampOutputLength(aiResult, MAX_EXTRACT_OUTPUT_CHARS);
 
     const duration = Date.now() - start;
@@ -222,7 +181,7 @@ app.post("/api/extract", async (req, res) => {
       res.json({ result: clamped });
     } else {
       console.error(`[POST /api/extract] Failed - Duration: ${duration}ms - No Output`);
-      res.json({ result: polishPlaceholder(safeText) });
+      res.json({ result: String(safeText ?? "").replace(/\s+/g, " ").trim() });
     }
   } catch (error) {
     const duration = Date.now() - start;
@@ -239,9 +198,28 @@ app.post("/enhance", async (req, res) => {
   console.log(`[POST /enhance] Start - Platform: ${platform}, Length: ${safeText.length}`);
 
   try {
-    const prompt = buildMobileEnhancePrompt({ text: safeText, tone, platform });
-    const draftyResult = await callDraftyEnhance({ text: safeText, tone, platform });
-    const aiResult = draftyResult || (await callGeminiWithFallback(prompt));
+    const messages = [
+      {
+        role: "system",
+        content: [
+          "You are Drafty Enhance for mobile.",
+          "Rewrite the text to be smoother and clearer.",
+          "Return ONLY the rewritten text.",
+          "No markdown. No explanations. No preamble."
+        ].join("\n")
+      },
+      {
+        role: "user",
+        content: [
+          `Tone: ${tone}.`,
+          `Platform: ${platform}.`,
+          "Text:",
+          safeText
+        ].join("\n")
+      }
+    ];
+
+    const aiResult = await callOpenAI(messages, { maxTokens: 500 });
     const maxOutput = MAX_MOBILE_OUTPUT_CHARS;
     const clamped = clampOutputLength(aiResult, maxOutput);
 
