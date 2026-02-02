@@ -51,7 +51,7 @@ function sanitizeOutput(text) {
   return String(text ?? "")
     .replace(/```[\s\S]*?```/g, "")
     .replace(/`/g, "")
-    .replace(/\s+/g, " ")
+    .replace(/[ \t]+/g, " ")
     .trim();
 }
 
@@ -117,6 +117,7 @@ app.post("/api/enhance", async (req, res) => {
         content: [
           "You are Drafty Enhance for desktop.",
           "Rewrite the text to be smoother and clearer.",
+          "Maintain natural paragraph breaks between semantic units (e.g., Greeting, Situation, Request, Schedule, Closing) using double newlines.",
           "Return ONLY the rewritten text.",
           "No markdown. No explanations. No preamble."
         ].join("\n")
@@ -217,6 +218,7 @@ app.post("/enhance", async (req, res) => {
         content: [
           "You are Drafty Enhance for mobile.",
           "Rewrite the text to be smoother and clearer.",
+          "Maintain natural paragraph breaks between semantic units (e.g., Greeting, Situation, Request, Schedule, Closing) using double newlines.",
           "Return ONLY the rewritten text.",
           "No markdown. No explanations. No preamble."
         ].join("\n")
