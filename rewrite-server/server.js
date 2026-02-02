@@ -195,7 +195,7 @@ app.post("/api/extract", async (req, res) => {
       res.json({ result: clamped });
     } else {
       console.error(`[POST /api/extract] Failed - Duration: ${duration}ms - No Output`);
-      res.json({ result: String(safeText ?? "").replace(/\s+/g, " ").trim() });
+      res.json({ result: String(safeText ?? "").replace(/[ \t]+/g, " ").trim() });
     }
   } catch (error) {
     const duration = Date.now() - start;

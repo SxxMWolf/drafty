@@ -348,6 +348,7 @@ function createExtractCard() {
   body.style.padding = "12px";
   body.style.borderRadius = "8px";
   body.style.transition = "background 0.3s, color 0.3s";
+  body.style.whiteSpace = "pre-wrap";
 
   // Retry Container (Hidden by default)
   const retryContainer = document.createElement("div");
