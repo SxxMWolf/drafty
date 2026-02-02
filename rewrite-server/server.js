@@ -1,12 +1,25 @@
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
+import { rateLimit } from "express-rate-limit";
 
 const app = express();
 app.use(express.json());
 
 // Full CORS for extension/content-script requests.
 app.use(cors());
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { result: "Too many requests, please try again later." }
+});
+
+// Apply rate limiting to all /api and rewrite routes
+app.use("/api/", limiter);
+app.use("/enhance", limiter);
 
 // Allow Private Network Access (HTTPS page -> localhost) in Chrome.
 app.use((req, res, next) => {
@@ -73,7 +86,7 @@ async function callOpenAI(messages, { temperature = 0.3, maxTokens = 800 } = {})
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: messages,
       temperature: temperature,
       max_tokens: maxTokens,

@@ -79,13 +79,8 @@ class KeyboardViewController: UIInputViewController {
     print("[Keyboard] Enhance tapped")
     let proxy = textDocumentProxy
     
-    // 1. Get selected text or context
-    // Ideally, we want selected text. But documentProxy often returns nil for selectedText.
-    // Fallback: Read text before cursor (last sentence/block).
-    
     var textToEnhance = proxy.selectedText ?? ""
     if textToEnhance.isEmpty {
-      // Grab reasonable context if no selection
       if let before = proxy.documentContextBeforeInput {
         textToEnhance = before
       }
@@ -96,32 +91,22 @@ class KeyboardViewController: UIInputViewController {
       return
     }
     
-    // 2. Call API
     setLoading(true)
-
-    let left = beforeParts.last ?? ""
-    let right = afterParts.first ?? ""
-    let sentence = (left + right).trimmingCharacters(in: .whitespacesAndNewlines)
-
-    return sentence.isEmpty ? before.trimmingCharacters(in: .whitespacesAndNewlines) : sentence
+    rewrite(text: textToEnhance)
   }
 
   private func setLoading(_ isLoading: Bool) {
-    polishButton.isEnabled = !isLoading
-    polishButton.alpha = isLoading ? 0.6 : 1.0
-    if isLoading {
-      activityIndicator.startAnimating()
-    } else {
-      activityIndicator.stopAnimating()
-    }
+    self.isLoading = isLoading
   }
 
   private func showStatus(_ message: String) {
-    statusLabel.text = message
+    DispatchQueue.main.async {
+      self.statusLabel.text = message
+    }
   }
 
   private func rewrite(text: String) {
-    guard let url = URL(string: "http://localhost:8080/api/rewrite") else {
+    guard let url = URL(string: "https://drafty-ssa4.onrender.com/api/enhance") else {
       setLoading(false)
       showStatus("Invalid server URL.")
       return
