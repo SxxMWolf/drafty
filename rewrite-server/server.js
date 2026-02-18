@@ -55,6 +55,40 @@ function sanitizeOutput(text) {
     .trim();
 }
 
+/**
+ * Heuristic to ensure a long block of text has at least some paragraph breaks
+ * if the AI failed to provide them despite instructions.
+ */
+function ensureParagraphs(text) {
+  if (!text || text.length < 300 || text.includes("\n\n")) {
+    return text;
+  }
+
+  // If it's a long block with only single newlines or no newlines,
+  // try to convert single newlines to double newlines if they look like paragraph ends.
+  if (text.includes("\n")) {
+    return text.replace(/\n/g, "\n\n");
+  }
+
+  // If it's a giant single block with NO newlines, try to break after some sentences.
+  // This is a fallback and might not be perfect, but better than a giant wall of text.
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  if (sentences.length > 3) {
+    let result = "";
+    for (let i = 0; i < sentences.length; i++) {
+      result += sentences[i].trim();
+      if ((i + 1) % 2 === 0 && i !== sentences.length - 1) {
+        result += "\n\n";
+      } else {
+        result += " ";
+      }
+    }
+    return result.trim();
+  }
+
+  return text;
+}
+
 function clampOutputLength(text, maxLength) {
   const safe = sanitizeOutput(text);
   if (!safe) {
@@ -117,7 +151,8 @@ app.post("/api/enhance", async (req, res) => {
         content: [
           "You are Drafty Enhance for desktop.",
           "Rewrite the text to be smoother and clearer.",
-          "Maintain natural paragraph breaks between semantic units (e.g., Greeting, Situation, Request, Schedule, Closing) using double newlines.",
+          "CRITICAL: You MUST use natural paragraph breaks between semantic units (e.g., Greeting, Situation, Request, Schedule, Closing).",
+          "ALWAYS use double newlines (\\n\\n) to separate paragraphs. Never return a single block of text for multiple ideas.",
           "Return ONLY the rewritten text.",
           "No markdown. No explanations. No preamble."
         ].join("\n")
@@ -135,8 +170,9 @@ app.post("/api/enhance", async (req, res) => {
     ];
 
     const aiResult = await callOpenAI(messages, { maxTokens: 800 });
+    const formatted = ensureParagraphs(aiResult);
     const maxOutput = MAX_DESKTOP_OUTPUT_CHARS;
-    const clamped = clampOutputLength(aiResult, maxOutput);
+    const clamped = clampOutputLength(formatted, maxOutput);
 
     const duration = Date.now() - start;
     if (clamped) {
@@ -218,7 +254,8 @@ app.post("/enhance", async (req, res) => {
         content: [
           "You are Drafty Enhance for mobile.",
           "Rewrite the text to be smoother and clearer.",
-          "Maintain natural paragraph breaks between semantic units (e.g., Greeting, Situation, Request, Schedule, Closing) using double newlines.",
+          "CRITICAL: You MUST use natural paragraph breaks between semantic units (e.g., Greeting, Situation, Request, Schedule, Closing).",
+          "ALWAYS use double newlines (\\n\\n) to separate paragraphs. Never return a single block of text for multiple ideas.",
           "Return ONLY the rewritten text.",
           "No markdown. No explanations. No preamble."
         ].join("\n")
@@ -235,8 +272,9 @@ app.post("/enhance", async (req, res) => {
     ];
 
     const aiResult = await callOpenAI(messages, { maxTokens: 500 });
+    const formatted = ensureParagraphs(aiResult);
     const maxOutput = MAX_MOBILE_OUTPUT_CHARS;
-    const clamped = clampOutputLength(aiResult, maxOutput);
+    const clamped = clampOutputLength(formatted, maxOutput);
 
     const duration = Date.now() - start;
     if (clamped) {

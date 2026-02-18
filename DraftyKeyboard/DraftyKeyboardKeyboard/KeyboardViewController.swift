@@ -106,7 +106,7 @@ class KeyboardViewController: UIInputViewController {
   }
 
   private func rewrite(text: String) {
-    guard let url = URL(string: "https://drafty-ssa4.onrender.com/api/enhance") else {
+    guard let url = URL(string: "https://drafty-ssa4.onrender.com/enhance") else {
       setLoading(false)
       showStatus("Invalid server URL.")
       return
