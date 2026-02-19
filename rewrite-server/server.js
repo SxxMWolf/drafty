@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { rateLimit } from "express-rate-limit";
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(express.json());
 
 // Full CORS for extension/content-script requests.
