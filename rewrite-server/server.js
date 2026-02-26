@@ -7,73 +7,95 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(express.json());
 
-// Full CORS for extension/content-script requests.
-app.use(cors());
+/* =========================
+   CORS (Restricted)
+========================= */
+
+const ALLOWED_ORIGINS = [
+  "https://drafty-ssa4.onrender.com"
+  // 필요 시 여기에 추가
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // curl/Postman 허용
+
+      if (
+        origin.startsWith("chrome-extension://") ||
+        ALLOWED_ORIGINS.includes(origin)
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    }
+  })
+);
+
+/* =========================
+   Rate Limiting
+========================= */
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
-  legacyHeaders: false,
-  message: { result: "Too many requests, please try again later." }
+  legacyHeaders: false
 });
 
-// Apply rate limiting to all /api and rewrite routes
 app.use("/api/", limiter);
 app.use("/enhance", limiter);
 
-// Allow Private Network Access (HTTPS page -> localhost) in Chrome.
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Private-Network", "true");
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
-    return;
-  }
-  next();
-});
+/* =========================
+   Constants
+========================= */
 
-const MAX_MOBILE_CHARS = 500;
+const MAX_INPUT_CHARS = 4000;
 const MAX_DESKTOP_OUTPUT_CHARS = 1200;
 const MAX_MOBILE_OUTPUT_CHARS = 500;
 const MAX_EXTRACT_OUTPUT_CHARS = 900;
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
-let openai = null;
+/* =========================
+   OpenAI Setup
+========================= */
 
-if (OPENAI_API_KEY) {
-  openai = new OpenAI({
-    apiKey: OPENAI_API_KEY,
-  });
-} else {
-  console.warn("[OpenAI] Warning: OPENAI_API_KEY not found in environment.");
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+
+if (!OPENAI_API_KEY) {
+  console.error("OPENAI_API_KEY not found.");
+  process.exit(1);
 }
+
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY
+});
+
+/* =========================
+   Utility Functions
+========================= */
 
 function sanitizeOutput(text) {
   return String(text ?? "")
-    .replace(/```[\s\S]*?```/g, "")
+    .replace(/```/g, "")       // 코드블록 마커만 제거
     .replace(/`/g, "")
+    .replace(/\r\n/g, "\n")
     .replace(/[ \t]+/g, " ")
     .trim();
 }
 
-/**
- * Heuristic to ensure a long block of text has at least some paragraph breaks
- * if the AI failed to provide them despite instructions.
- */
 function ensureParagraphs(text) {
   if (!text || text.length < 300 || text.includes("\n\n")) {
     return text;
   }
 
-  // If it's a long block with only single newlines or no newlines,
-  // try to convert single newlines to double newlines if they look like paragraph ends.
   if (text.includes("\n")) {
-    return text.replace(/\n/g, "\n\n");
+    // 단일 줄바꿈만 두 줄로 변경
+    return text.replace(/\n(?!\n)/g, "\n\n");
   }
 
-  // If it's a giant single block with NO newlines, try to break after some sentences.
-  // This is a fallback and might not be perfect, but better than a giant wall of text.
   const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+
   if (sentences.length > 3) {
     let result = "";
     for (let i = 0; i < sentences.length; i++) {
@@ -92,15 +114,13 @@ function ensureParagraphs(text) {
 
 function clampOutputLength(text, maxLength) {
   const safe = sanitizeOutput(text);
-  if (!safe) {
-    return "";
-  }
-  if (safe.length <= maxLength) {
-    return safe;
-  }
+  if (!safe) return "";
+
+  if (safe.length <= maxLength) return safe;
 
   const slice = safe.slice(0, maxLength).trim();
   const sentenceMatch = slice.match(/[\s\S]*[.!?]/);
+
   if (sentenceMatch && sentenceMatch[0].length >= Math.floor(maxLength * 0.6)) {
     return sentenceMatch[0].trim();
   }
@@ -114,185 +134,123 @@ function clampOutputLength(text, maxLength) {
 }
 
 async function callOpenAI(messages, { temperature = 0.3, maxTokens = 800 } = {}) {
-  if (!openai) {
-    console.error("[OpenAI] Client not initialized (missing API key?)");
-    return null;
-  }
-
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: messages,
-      temperature: temperature,
+      messages,
+      temperature,
       max_tokens: maxTokens,
-      top_p: 1.0,
+      top_p: 1.0
     });
 
     const text = completion.choices[0]?.message?.content;
     return typeof text === "string" ? text.trim() : null;
   } catch (error) {
-    console.error(`[OpenAI] Error: ${error.message}`);
+    console.error("[OpenAI Error]", error.message);
     return null;
   }
 }
 
-
+/* =========================
+   API Routes
+========================= */
 
 app.post("/api/enhance", async (req, res) => {
   const start = Date.now();
   const { text, type, tone, language } = req.body || {};
-  const safeText = String(text ?? "").trim();
-
-  console.log(`[POST /api/enhance] Start - Mode: ${type}/${tone}, Length: ${safeText.length}`);
+  const safeText = String(text ?? "")
+    .slice(0, MAX_INPUT_CHARS)
+    .trim();
 
   try {
     const messages = [
       {
         role: "system",
-        content: [
-          "You are Drafty Enhance for desktop.",
-          "Rewrite the text to be smoother and clearer.",
-          "CRITICAL: You MUST use natural paragraph breaks between semantic units (e.g., Greeting, Situation, Request, Schedule, Closing).",
-          "ALWAYS use double newlines (\\n\\n) to separate paragraphs. Never return a single block of text for multiple ideas.",
-          "Return ONLY the rewritten text.",
-          "No markdown. No explanations. No preamble."
-        ].join("\n")
+        content:
+          "Rewrite the text to be smoother and clearer.\n" +
+          "Use natural paragraph breaks.\n" +
+          "Use double newlines between paragraphs.\n" +
+          "Return only the rewritten text."
       },
       {
         role: "user",
-        content: [
-          `Type: ${type || "community"}.`,
-          `Tone: ${tone || "neutral"}.`,
-          `Language: ${language || "auto"}.`,
-          "Text:",
-          safeText
-        ].join("\n")
+        content:
+          `Type: ${type || "community"}\n` +
+          `Tone: ${tone || "neutral"}\n` +
+          `Language: ${language || "auto"}\n` +
+          `Text:\n${safeText}`
       }
     ];
 
-    const aiResult = await callOpenAI(messages, { maxTokens: 800 });
-    const formatted = ensureParagraphs(aiResult);
-    const maxOutput = MAX_DESKTOP_OUTPUT_CHARS;
-    const clamped = clampOutputLength(formatted, maxOutput);
+    const aiResult = await callOpenAI(messages);
 
-    const duration = Date.now() - start;
-    if (clamped) {
-      console.log(`[POST /api/enhance] Success - Duration: ${duration}ms`);
-      res.json({ result: clamped });
-    } else {
-      console.error(`[POST /api/enhance] Failed - Duration: ${duration}ms - No Output`);
-      res.json({ result: "Service busy, please try again." });
+    if (!aiResult) {
+      return res.status(503).json({ error: "Service unavailable" });
     }
+
+    const formatted = ensureParagraphs(aiResult);
+    const clamped = clampOutputLength(
+      formatted,
+      MAX_DESKTOP_OUTPUT_CHARS
+    );
+
+    return res.json({ result: clamped });
   } catch (error) {
-    const duration = Date.now() - start;
-    console.error(`[POST /api/enhance] Error - Duration: ${duration}ms`, error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Enhance Error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 app.post("/api/extract", async (req, res) => {
-  const start = Date.now();
   const { text, tone, language } = req.body || {};
-  const safeText = String(text ?? "").trim();
-
-  console.log(`[POST /api/extract] Start - Length: ${safeText.length}`);
-
-  try {
-    const messages = [
-      {
-        role: "system",
-        content: [
-          "You are Drafty Extract.",
-          "Summarize the following text.",
-          "First line: 1-sentence overview.",
-          "Then: bullet points with key facts only.",
-          "Do NOT add opinions.",
-          "Do NOT repeat the text verbatim.",
-          "Return ONLY the summary.",
-          "Bullet symbol must be •"
-        ].join("\n")
-      },
-      {
-        role: "user",
-        content: [
-          `Tone: ${tone || "neutral"}.`,
-          `Language: ${language || "auto"}.`,
-          "Text:",
-          safeText
-        ].join("\n")
-      }
-    ];
-
-    const aiResult = await callOpenAI(messages, { maxTokens: 800 });
-    const clamped = clampOutputLength(aiResult, MAX_EXTRACT_OUTPUT_CHARS);
-
-    const duration = Date.now() - start;
-    if (clamped) {
-      console.log(`[POST /api/extract] Success - Duration: ${duration}ms`);
-      res.json({ result: clamped });
-    } else {
-      console.error(`[POST /api/extract] Failed - Duration: ${duration}ms - No Output`);
-      res.json({ result: String(safeText ?? "").replace(/[ \t]+/g, " ").trim() });
-    }
-  } catch (error) {
-    const duration = Date.now() - start;
-    console.error(`[POST /api/extract] Error - Duration: ${duration}ms`, error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-app.post("/enhance", async (req, res) => {
-  const start = Date.now();
-  const { text = "", tone = "neutral", platform = "ios-keyboard" } = req.body || {};
-  const safeText = String(text).slice(0, MAX_MOBILE_CHARS);
-
-  console.log(`[POST /enhance] Start - Platform: ${platform}, Length: ${safeText.length}`);
+  const safeText = String(text ?? "")
+    .slice(0, MAX_INPUT_CHARS)
+    .trim();
 
   try {
     const messages = [
       {
         role: "system",
-        content: [
-          "You are Drafty Enhance for mobile.",
-          "Rewrite the text to be smoother and clearer.",
-          "CRITICAL: You MUST use natural paragraph breaks between semantic units (e.g., Greeting, Situation, Request, Schedule, Closing).",
-          "ALWAYS use double newlines (\\n\\n) to separate paragraphs. Never return a single block of text for multiple ideas.",
-          "Return ONLY the rewritten text.",
-          "No markdown. No explanations. No preamble."
-        ].join("\n")
+        content:
+          "Summarize the text.\n" +
+          "First line: one-sentence overview.\n" +
+          "Then bullet points with key facts.\n" +
+          "Bullet symbol must be •\n" +
+          "Return only the summary."
       },
       {
         role: "user",
-        content: [
-          `Tone: ${tone}.`,
-          `Platform: ${platform}.`,
-          "Text:",
-          safeText
-        ].join("\n")
+        content:
+          `Tone: ${tone || "neutral"}\n` +
+          `Language: ${language || "auto"}\n` +
+          `Text:\n${safeText}`
       }
     ];
 
-    const aiResult = await callOpenAI(messages, { maxTokens: 500 });
-    const formatted = ensureParagraphs(aiResult);
-    const maxOutput = MAX_MOBILE_OUTPUT_CHARS;
-    const clamped = clampOutputLength(formatted, maxOutput);
+    const aiResult = await callOpenAI(messages);
 
-    const duration = Date.now() - start;
-    if (clamped) {
-      console.log(`[POST /enhance] Success - Duration: ${duration}ms`);
-      res.json({ polishedText: clamped });
-    } else {
-      console.error(`[POST /enhance] Failed - Duration: ${duration}ms - No Output`);
-      res.json({ polishedText: "Please try again." });
+    if (!aiResult) {
+      return res.status(503).json({ error: "Service unavailable" });
     }
+
+    const clamped = clampOutputLength(
+      aiResult,
+      MAX_EXTRACT_OUTPUT_CHARS
+    );
+
+    return res.json({ result: clamped });
   } catch (error) {
-    const duration = Date.now() - start;
-    console.error(`[POST /enhance] Error - Duration: ${duration}ms`, error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Extract Error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+/* =========================
+   Server Start
+========================= */
 
 const PORT = Number(process.env.PORT) || 8080;
+
 app.listen(PORT, () => {
-  console.log(`Rewrite server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

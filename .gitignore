@@ -1,2 +1,24 @@
+# System Files
 .DS_Store
+Thumbs.db
+
+# Environments
+.env
+.env.*
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build and Debug
 debug_*.js
+dist/
+build/
+*.log
+
+# Apple/Xcode
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+DerivedData/

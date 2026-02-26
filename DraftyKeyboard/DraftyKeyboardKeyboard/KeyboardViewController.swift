@@ -179,7 +179,7 @@ class KeyboardViewController: UIInputViewController {
   }
 
   private func rewrite(text: String) {
-    guard let url = URL(string: "https://drafty-ssa4.onrender.com/enhance") else {
+    guard let url = URL(string: "https://drafty-ssa4.onrender.com/api/enhance") else {
       setLoading(false)
       showStatus("URL Error. 🛑")
       return
@@ -221,7 +221,7 @@ class KeyboardViewController: UIInputViewController {
       guard
         let data,
         let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-        let result = json["polishedText"] as? String
+        let result = (json["result"] as? String) ?? (json["polishedText"] as? String)
       else {
         DispatchQueue.main.async {
           self.setLoading(false)
