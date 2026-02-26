@@ -5,33 +5,33 @@ import { rateLimit } from "express-rate-limit";
 
 const app = express();
 app.set("trust proxy", 1);
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 
 /* =========================
-   CORS (Restricted)
+   Environment Variables
 ========================= */
 
-const ALLOWED_ORIGINS = [
-  "https://drafty-ssa4.onrender.com"
-  // 필요 시 여기에 추가
-];
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const API_KEY = process.env.API_KEY || "";
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // curl/Postman 허용
+if (!OPENAI_API_KEY) {
+  console.error("OPENAI_API_KEY not found.");
+  process.exit(1);
+}
 
-      if (
-        origin.startsWith("chrome-extension://") ||
-        ALLOWED_ORIGINS.includes(origin)
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    }
-  })
-);
+if (!API_KEY) {
+  console.error("API_KEY not found.");
+  process.exit(1);
+}
+
+/* =========================
+   CORS (Allow All Origins)
+========================= */
+
+app.use(cors({
+  origin: true,
+  credentials: false
+}));
 
 /* =========================
    Rate Limiting
@@ -45,7 +45,20 @@ const limiter = rateLimit({
 });
 
 app.use("/api/", limiter);
-app.use("/enhance", limiter);
+
+/* =========================
+   API Key Middleware
+========================= */
+
+function requireApiKey(req, res, next) {
+  const key = req.headers["x-api-key"];
+
+  if (!key || key !== API_KEY) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  next();
+}
 
 /* =========================
    Constants
@@ -53,19 +66,11 @@ app.use("/enhance", limiter);
 
 const MAX_INPUT_CHARS = 4000;
 const MAX_DESKTOP_OUTPUT_CHARS = 1200;
-const MAX_MOBILE_OUTPUT_CHARS = 500;
 const MAX_EXTRACT_OUTPUT_CHARS = 900;
 
 /* =========================
    OpenAI Setup
 ========================= */
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
-
-if (!OPENAI_API_KEY) {
-  console.error("OPENAI_API_KEY not found.");
-  process.exit(1);
-}
 
 const openai = new OpenAI({
   apiKey: OPENAI_API_KEY
@@ -77,7 +82,7 @@ const openai = new OpenAI({
 
 function sanitizeOutput(text) {
   return String(text ?? "")
-    .replace(/```/g, "")       // 코드블록 마커만 제거
+    .replace(/```/g, "")
     .replace(/`/g, "")
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+/g, " ")
@@ -90,7 +95,6 @@ function ensureParagraphs(text) {
   }
 
   if (text.includes("\n")) {
-    // 단일 줄바꿈만 두 줄로 변경
     return text.replace(/\n(?!\n)/g, "\n\n");
   }
 
@@ -155,12 +159,16 @@ async function callOpenAI(messages, { temperature = 0.3, maxTokens = 800 } = {})
    API Routes
 ========================= */
 
-app.post("/api/enhance", async (req, res) => {
-  const start = Date.now();
+app.post("/api/enhance", requireApiKey, async (req, res) => {
   const { text, type, tone, language } = req.body || {};
+
   const safeText = String(text ?? "")
     .slice(0, MAX_INPUT_CHARS)
     .trim();
+
+  if (!safeText) {
+    return res.status(400).json({ error: "Text is required" });
+  }
 
   try {
     const messages = [
@@ -201,11 +209,16 @@ app.post("/api/enhance", async (req, res) => {
   }
 });
 
-app.post("/api/extract", async (req, res) => {
+app.post("/api/extract", requireApiKey, async (req, res) => {
   const { text, tone, language } = req.body || {};
+
   const safeText = String(text ?? "")
     .slice(0, MAX_INPUT_CHARS)
     .trim();
+
+  if (!safeText) {
+    return res.status(400).json({ error: "Text is required" });
+  }
 
   try {
     const messages = [

@@ -2,6 +2,7 @@
 console.log("[AI Rewrite] content script loaded");
 
 const API_BASE_URL = "https://drafty-ssa4.onrender.com";
+const API_KEY = "drafty-prod-token-v1"; // Sync this with Render env var
 
 // Default rewrite options for MVP (no UI yet).
 const DEFAULT_OPTIONS = {
@@ -613,7 +614,8 @@ async function handleRewriteClick() {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-api-key": API_KEY
       },
       body: JSON.stringify({
         ...DEFAULT_OPTIONS,

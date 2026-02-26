@@ -194,6 +194,7 @@ class KeyboardViewController: UIInputViewController {
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("drafty-prod-token-v1", forHTTPHeaderField: "x-api-key")
     request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
 
     let config = URLSessionConfiguration.ephemeral
