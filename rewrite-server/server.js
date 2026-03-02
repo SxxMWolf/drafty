@@ -175,10 +175,10 @@ app.post("/api/enhance", requireApiKey, async (req, res) => {
       {
         role: "system",
         content:
-          "Rewrite the text to be smoother and clearer.\n" +
+          "Improve the text to be smoother and clearer.\n" +
           "Use natural paragraph breaks.\n" +
-          "Use double newlines between paragraphs.\n" +
-          "Return only the rewritten text."
+          "Return only the improved text.\n" +
+          "Adjust the tone based on the provided instruction."
       },
       {
         role: "user",
